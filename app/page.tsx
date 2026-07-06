@@ -25,7 +25,7 @@ export default function HomePage() {
         <p className="text-gray-500">Blog posts coming in Stage 2.</p>
         <div className="mt-4">
           <Link href="/blog" className="text-brand-600 font-medium hover:underline">
-            View all posts →
+            View all posts &rarr;
           </Link>
         </div>
       </section>
