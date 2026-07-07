@@ -7,6 +7,8 @@ export const metadata: Metadata = {
   description: 'Swimming tips, water safety guides, and updates from SwimKidsSG.',
 }
 
+export const dynamic = 'force-static'
+
 export default function BlogPage() {
   const posts = getAllPosts()
 

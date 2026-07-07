@@ -1,7 +1,10 @@
+'use client'
+
+import { memo } from 'react'
 import Link from 'next/link'
 import type { PostMeta } from '@/lib/mdx'
 
-export default function BlogCard({ post }: { post: PostMeta }) {
+function BlogCardComponent({ post }: { post: PostMeta }) {
   return (
     <Link href={`/blog/${post.slug}`} className="group block bg-white border border-gray-100 rounded-xl p-6 hover:shadow-md transition">
       <p className="text-xs text-gray-400 mb-2">
@@ -17,3 +20,5 @@ export default function BlogCard({ post }: { post: PostMeta }) {
     </Link>
   )
 }
+
+export default memo(BlogCardComponent)
