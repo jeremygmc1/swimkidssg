@@ -1,6 +1,10 @@
 import Link from 'next/link'
+import { getAllPosts } from '@/lib/mdx'
+import BlogCard from '@/components/BlogCard'
 
 export default function HomePage() {
+  const latestPosts = getAllPosts().slice(0, 3)
+
   return (
     <>
       {/* Hero */}
@@ -19,13 +23,17 @@ export default function HomePage() {
         </Link>
       </section>
 
-      {/* Latest Posts placeholder */}
+      {/* Latest Posts */}
       <section className="max-w-5xl mx-auto px-6 py-16">
         <h2 className="text-2xl font-bold mb-8 text-gray-900">Latest from the Blog</h2>
-        <p className="text-gray-500">Blog posts coming in Stage 2.</p>
-        <div className="mt-4">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {latestPosts.map((post) => (
+            <BlogCard key={post.slug} post={post} />
+          ))}
+        </div>
+        <div className="mt-8">
           <Link href="/blog" className="text-brand-600 font-medium hover:underline">
-            View all posts &rarr;
+            View all posts →
           </Link>
         </div>
       </section>
