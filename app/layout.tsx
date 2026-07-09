@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   description: 'Expert swimming lessons for kids in Singapore. Build confidence, water safety, and stroke technique from beginner to advanced.',
   metadataBase: new URL('https://swimkidssg.com'),
   icons: {
-    icon: '/SwimKids SG logo (Circle).png',
+    icon: '/SwimKids SG logo (Circle).svg',
     apple: '/SwimKids SG logo (Circle).png',
   },
   openGraph: {

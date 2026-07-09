@@ -6,7 +6,7 @@ export default function Footer() {
     <footer className="bg-brand-900 text-white py-10 px-6 mt-16">
       <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
         <Image
-          src="/SwimKids SG logo.png"
+          src="/SwimKids SG logo.svg"
           alt="SwimKidsSG"
           width={120}
           height={36}

@@ -18,7 +18,7 @@ export default function Navbar() {
       <div className="max-w-5xl mx-auto px-6 flex items-center justify-between h-16">
         <Link href="/" className="flex items-center">
           <Image
-            src="/SwimKids SG logo.png"
+            src="/SwimKids SG logo.svg"
             alt="SwimKidsSG"
             width={160}
             height={48}
