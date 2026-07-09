@@ -1,4 +1,4 @@
-import type { FieldConfig } from './ContactForm'
+import type { FieldConfig } from '@/lib/fields'
 
 const COUNTRY_CODES = [
   { code: '+65', label: '🇸🇬 +65 (SG)' },

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { appendRow } from '@/lib/sheets'
-import { FIELDS } from '@/components/ContactForm'
+import { FIELDS } from '@/lib/fields'
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
