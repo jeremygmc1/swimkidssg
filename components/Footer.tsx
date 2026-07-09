@@ -10,7 +10,7 @@ export default function Footer() {
           alt="SwimKidsSG"
           width={120}
           height={36}
-          className="h-8 w-auto object-contain brightness-0 invert"
+          className="h-10 w-auto object-contain"
         />
         <div className="flex gap-6 text-sm text-brand-100">
           <Link href="/" className="hover:text-cyan-400 transition">Home</Link>
