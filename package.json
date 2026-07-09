@@ -9,7 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "googleapis": "^144.0.0",
+    "googleapis": "^173.0.0",
     "gray-matter": "^4.0.3",
     "next": "^16.2.10",
     "next-mdx-remote": "^6.0.0",
