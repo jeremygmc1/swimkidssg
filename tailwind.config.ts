@@ -10,12 +10,22 @@ const config: Config = {
     extend: {
       colors: {
         brand: {
-          50:  '#eff6ff',
-          100: '#dbeafe',
-          500: '#3b82f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
-          900: '#1e3a8a',
+          50:  '#E0F6FB',
+          100: '#B8EAF6',
+          500: '#29B8D8',
+          600: '#1EA8C8',
+          700: '#1B3A6B',
+          900: '#152D52',
+        },
+        cyan: {
+          400: '#7DD8EC',
+          500: '#29B8D8',
+          600: '#1EA8C8',
+        },
+        highlight: {
+          400: '#F7B84B',
+          500: '#F5A623',
+          600: '#E8960F',
         },
       },
       fontFamily: {
