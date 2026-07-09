@@ -11,8 +11,33 @@ export const metadata: Metadata = {
     default: 'SwimKidsSG — Swimming Lessons for Kids in Singapore',
     template: '%s | SwimKidsSG',
   },
-  description: 'Expert swimming lessons for kids in Singapore. Build confidence, safety, and stroke technique from beginner to advanced.',
+  description: 'Expert swimming lessons for kids in Singapore. Build confidence, water safety, and stroke technique from beginner to advanced.',
   metadataBase: new URL('https://swimkidssg.com'),
+  icons: {
+    icon: '/SwimKids SG logo (Circle).png',
+    apple: '/SwimKids SG logo (Circle).png',
+  },
+  openGraph: {
+    type: 'website',
+    url: 'https://swimkidssg.com',
+    siteName: 'SwimKidsSG',
+    title: 'SwimKidsSG — Swimming Lessons for Kids in Singapore',
+    description: 'Expert swimming lessons for kids in Singapore. Build confidence, water safety, and stroke technique from beginner to advanced.',
+    images: [
+      {
+        url: '/SwimKids SG logo (Circle).png',
+        width: 1080,
+        height: 1080,
+        alt: 'SwimKidsSG',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary',
+    title: 'SwimKidsSG — Swimming Lessons for Kids in Singapore',
+    description: 'Expert swimming lessons for kids in Singapore.',
+    images: ['/SwimKids SG logo (Circle).png'],
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { useState } from 'react'
 
 const links = [
@@ -15,32 +16,37 @@ export default function Navbar() {
   return (
     <nav className="bg-white border-b border-gray-100 sticky top-0 z-50">
       <div className="max-w-5xl mx-auto px-6 flex items-center justify-between h-16">
-        <Link href="/" className="text-brand-700 font-bold text-xl tracking-tight">
-          SwimKidsSG
+        <Link href="/" className="flex items-center">
+          <Image
+            src="/SwimKids SG logo.png"
+            alt="SwimKidsSG"
+            width={160}
+            height={48}
+            className="h-10 w-auto object-contain"
+            priority
+          />
         </Link>
 
-        {/* Desktop links */}
         <div className="hidden md:flex items-center gap-8">
           {links.map((l) => (
             <Link
               key={l.href}
               href={l.href}
-              className="text-gray-600 hover:text-brand-700 font-medium transition text-sm"
+              className="text-brand-700 hover:text-cyan-500 font-medium transition text-sm"
             >
               {l.label}
             </Link>
           ))}
           <Link
             href="/contact"
-            className="bg-brand-600 text-white text-sm font-semibold px-5 py-2 rounded-full hover:bg-brand-700 transition"
+            className="bg-brand-700 text-white text-sm font-semibold px-5 py-2 rounded-full hover:bg-brand-900 transition"
           >
             Enquire Now
           </Link>
         </div>
 
-        {/* Mobile hamburger */}
         <button
-          className="md:hidden text-gray-600"
+          className="md:hidden text-brand-700"
           onClick={() => setOpen(!open)}
           aria-label="Toggle menu"
         >
@@ -53,14 +59,13 @@ export default function Navbar() {
         </button>
       </div>
 
-      {/* Mobile menu */}
       {open && (
         <div className="md:hidden border-t border-gray-100 px-6 py-4 flex flex-col gap-4 bg-white">
           {links.map((l) => (
             <Link
               key={l.href}
               href={l.href}
-              className="text-gray-700 font-medium"
+              className="text-brand-700 font-medium"
               onClick={() => setOpen(false)}
             >
               {l.label}
@@ -68,7 +73,7 @@ export default function Navbar() {
           ))}
           <Link
             href="/contact"
-            className="bg-brand-600 text-white text-sm font-semibold px-5 py-2 rounded-full text-center hover:bg-brand-700 transition"
+            className="bg-brand-700 text-white text-sm font-semibold px-5 py-2 rounded-full text-center hover:bg-brand-900 transition"
             onClick={() => setOpen(false)}
           >
             Enquire Now
