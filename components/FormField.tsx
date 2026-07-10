@@ -37,7 +37,7 @@ export default function FormField({ field, value, phoneCode, onChange }: Props) 
           <select
             value={phoneCode ?? '+65'}
             onChange={(e) => onChange(`${name}_code`, e.target.value)}
-            className={`${base} w-40 shrink-0`}
+            className={`${base} flex-1 min-w-0 px-2`}
           >
             {COUNTRY_CODES.map((c) => (
               <option key={c.code} value={c.code}>{c.label}</option>
@@ -52,7 +52,7 @@ export default function FormField({ field, value, phoneCode, onChange }: Props) 
             placeholder="e.g. 91234567"
             maxLength={10}
             onChange={(e) => onChange(name, e.target.value)}
-            className={base}
+            className={`${base} flex-[5] min-w-0`}
           />
         </div>
       )}
