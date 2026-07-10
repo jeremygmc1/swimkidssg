@@ -13,14 +13,14 @@ export const metadata: Metadata = {
     template: '%s | SwimKidsSG',
   },
   description: 'Expert swimming lessons for kids in Singapore. Build confidence, water safety, and stroke technique from beginner to advanced.',
-  metadataBase: new URL('https://swimkidssg.com'),
+  metadataBase: new URL('https://www.swimkidssg.com'),
   icons: {
     icon: '/SwimKids SG logo (Circle).svg',
     apple: '/SwimKids SG logo (Circle).svg',
   },
   openGraph: {
     type: 'website',
-    url: 'https://swimkidssg.com',
+    url: 'https://www.swimkidssg.com',
     siteName: 'SwimKidsSG',
     title: 'SwimKidsSG — Swimming Lessons for Kids in Singapore',
     description: 'Expert swimming lessons for kids in Singapore. Build confidence, water safety, and stroke technique from beginner to advanced.',
