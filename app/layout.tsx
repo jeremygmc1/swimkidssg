@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://swimkidssg.com'),
   icons: {
     icon: '/SwimKids SG logo (Circle).svg',
-    apple: '/SwimKids SG logo (Circle).png',
+    apple: '/SwimKids SG logo (Circle).svg',
   },
   openGraph: {
     type: 'website',
