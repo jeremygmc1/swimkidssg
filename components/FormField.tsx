@@ -24,7 +24,7 @@ type Props = {
 }
 
 export default function FormField({ field, value, phoneCode, onChange }: Props) {
-  const { name, label, type, required, options, min, max } = field
+  const { name, label, type, required, options, min, max, maxLength } = field
 
   return (
     <div className="flex flex-col gap-1">
@@ -50,7 +50,7 @@ export default function FormField({ field, value, phoneCode, onChange }: Props) 
             value={value}
             required={required}
             placeholder="e.g. 91234567"
-            maxLength={10}
+            maxLength={maxLength}
             onChange={(e) => onChange(name, e.target.value)}
             className={`${base} flex-[5] min-w-0`}
           />
@@ -80,6 +80,7 @@ export default function FormField({ field, value, phoneCode, onChange }: Props) 
           value={value}
           required={required}
           rows={4}
+          maxLength={maxLength}
           placeholder={`Enter your ${label.toLowerCase()}…`}
           onChange={(e) => onChange(name, e.target.value)}
           className={base}
@@ -95,6 +96,7 @@ export default function FormField({ field, value, phoneCode, onChange }: Props) 
           required={required}
           min={min}
           max={max}
+          maxLength={maxLength}
           placeholder={`Enter ${label.toLowerCase()}…`}
           onChange={(e) => onChange(name, e.target.value)}
           className={base}

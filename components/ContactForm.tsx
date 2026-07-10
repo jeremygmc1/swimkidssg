@@ -12,6 +12,7 @@ function buildInitialState(): FormState {
     state[f.name] = ''
     if (f.type === 'phone') state[`${f.name}_code`] = '+65'
   }
+  state.company = '' // honeypot — hidden from humans, bots fill it
   return state
 }
 
@@ -65,6 +66,19 @@ export default function ContactForm() {
           onChange={handleChange}
         />
       ))}
+
+      <div className="absolute -left-[9999px]" aria-hidden="true">
+        <label htmlFor="company">Company</label>
+        <input
+          id="company"
+          type="text"
+          name="company"
+          value={values.company}
+          tabIndex={-1}
+          autoComplete="off"
+          onChange={(e) => handleChange('company', e.target.value)}
+        />
+      </div>
 
       {status === 'error' && (
         <p className="text-sm text-red-600">{errorMsg}</p>

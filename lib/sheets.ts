@@ -24,7 +24,7 @@ export async function appendRow(data: Record<string, string>) {
   await sheets.spreadsheets.values.append({
     spreadsheetId: sheetId,
     range: 'Sheet1!A1',
-    valueInputOption: 'USER_ENTERED',
+    valueInputOption: 'RAW',
     insertDataOption: 'INSERT_ROWS',
     requestBody: { values },
   })
