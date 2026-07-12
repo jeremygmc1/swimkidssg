@@ -1,11 +1,28 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 export default function FloatingCTA() {
   const pathname = usePathname()
+  const isHome = pathname === '/'
+  const [pastHeroCta, setPastHeroCta] = useState(false)
+
+  useEffect(() => {
+    if (!isHome) return
+    const heroCta = document.getElementById('hero-cta')
+    if (!heroCta) return
+
+    // "Scrolled past" = the hero button has left the viewport upwards
+    const onScroll = () => setPastHeroCta(heroCta.getBoundingClientRect().bottom < 0)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [isHome])
+
   if (pathname === '/contact') return null
+  if (isHome && !pastHeroCta) return null
 
   return (
     <Link

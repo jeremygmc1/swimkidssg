@@ -16,6 +16,7 @@ export default function HomePage() {
           Building confidence, water safety, and proper technique — from beginner splashes to advanced strokes.
         </p>
         <Link
+          id="hero-cta"
           href="/contact"
           className="inline-block bg-highlight-500 text-white font-bold px-10 py-4 rounded-full hover:bg-highlight-600 transition text-lg shadow-lg"
         >
