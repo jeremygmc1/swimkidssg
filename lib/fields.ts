@@ -20,7 +20,7 @@ export const FIELDS: FieldConfig[] = [
     label: 'Swim Level',
     type: 'select',
     required: true,
-    options: ['Beginner', 'Intermediate', 'Advanced'],
+    options: ['Beginner', 'Intermediate', 'Advanced', 'Competitive'],
     maxLength: 50,
   },
   { name: 'message',    label: 'Message / Enquiry', type: 'textarea', required: false, maxLength: 2000 },
