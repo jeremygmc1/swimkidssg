@@ -26,12 +26,19 @@ export default async function PostPage({ params }: Props) {
     notFound()
   }
 
+  const formatDate = (d: string) =>
+    new Date(d).toLocaleDateString('en-SG', { year: 'numeric', month: 'long', day: 'numeric' })
+
   return (
     <article className="max-w-2xl mx-auto px-6 py-16">
-      <p className="text-sm text-gray-400 mb-2">
-        {new Date(post.date).toLocaleDateString('en-SG', { year: 'numeric', month: 'long', day: 'numeric' })}
-      </p>
-      <h1 className="text-3xl font-bold text-brand-700 mb-8">{post.title}</h1>
+      <p className="text-sm text-gray-400 mb-2">{formatDate(post.date)}</p>
+      <h1 className={`text-3xl font-bold text-brand-700 ${post.author ? 'mb-2' : 'mb-8'}`}>{post.title}</h1>
+      {post.author && (
+        <p className="text-sm text-gray-500 mb-8">
+          By {post.author}
+          {post.lastEdited && <span className="text-gray-400"> · Last edited {formatDate(post.lastEdited)}</span>}
+        </p>
+      )}
       <div className="prose prose-lg max-w-none prose-headings:text-brand-700 prose-headings:font-bold prose-a:text-cyan-500 prose-a:no-underline hover:prose-a:underline prose-strong:text-brand-700 prose-li:marker:text-cyan-500 prose-hr:border-gray-200">
         <MDXRemote source={post.content} components={{ Carousel }} />
       </div>

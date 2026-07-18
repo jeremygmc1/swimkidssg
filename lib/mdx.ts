@@ -10,6 +10,8 @@ export type PostMeta = {
   date: string
   excerpt: string
   coverImage?: string
+  author?: string
+  lastEdited?: string
 }
 
 export type Post = PostMeta & {
@@ -30,6 +32,8 @@ export function getAllPosts(): PostMeta[] {
         date: data.date ?? '',
         excerpt: data.excerpt ?? '',
         coverImage: data.coverImage ?? null,
+        author: data.author ?? null,
+        lastEdited: data.lastEdited ?? null,
       }
     })
     .sort((a, b) => (a.date < b.date ? 1 : -1))
@@ -45,6 +49,8 @@ export function getPostBySlug(slug: string): Post {
     date: data.date ?? '',
     excerpt: data.excerpt ?? '',
     coverImage: data.coverImage ?? null,
+    author: data.author ?? null,
+    lastEdited: data.lastEdited ?? null,
     content,
   }
 }

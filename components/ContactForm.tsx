@@ -22,7 +22,14 @@ export default function ContactForm() {
   const [errorMsg, setErrorMsg] = useState('')
 
   function handleChange(name: string, value: string) {
-    setValues((prev) => ({ ...prev, [name]: value }))
+    setValues((prev) => {
+      const next = { ...prev, [name]: value }
+      // Clear any field whose showIf condition no longer holds
+      for (const f of FIELDS) {
+        if (f.showIf?.field === name && value !== f.showIf.value) next[f.name] = ''
+      }
+      return next
+    })
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -57,7 +64,7 @@ export default function ContactForm() {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-      {FIELDS.map((field) => (
+      {FIELDS.filter((f) => !f.showIf || values[f.showIf.field] === f.showIf.value).map((field) => (
         <FormField
           key={field.name}
           field={field}
