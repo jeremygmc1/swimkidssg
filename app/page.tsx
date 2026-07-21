@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { getAllPosts } from '@/lib/mdx'
 import BlogCard from '@/components/BlogCard'
 
@@ -22,6 +23,18 @@ export default function HomePage() {
         >
           Enquire Now
         </Link>
+      </section>
+
+      {/* Photo band */}
+      <section className="relative h-64 md:h-96 w-full">
+        <Image
+          src="/home-banner.jpg"
+          alt="A swim instructor guiding a young child during a lesson at an outdoor pool"
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover"
+        />
       </section>
 
       {/* Why SwimKidsSG */}
