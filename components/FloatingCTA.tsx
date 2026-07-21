@@ -27,7 +27,7 @@ export default function FloatingCTA() {
   return (
     <Link
       href="/contact"
-      className="fixed bottom-6 right-6 z-50 rounded-full bg-highlight-500 px-6 py-3 text-sm font-semibold text-white shadow-lg hover:bg-highlight-600 transition"
+      className="fixed bottom-6 right-6 z-50 origin-bottom-right scale-110 rounded-full bg-highlight-500 px-6 py-3 text-sm font-semibold text-white shadow-lg hover:bg-highlight-600 transition"
     >
       Enquire Now
     </Link>
