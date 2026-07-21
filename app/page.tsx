@@ -8,33 +8,31 @@ export default function HomePage() {
 
   return (
     <>
-      {/* Hero */}
-      <section className="bg-brand-900 text-white py-24 px-6 text-center">
-        <h1 className="text-4xl md:text-5xl font-bold mb-4 leading-tight">
-          Swimming Lessons for Kids<br className="hidden md:block" /> in Singapore
-        </h1>
-        <p className="text-lg md:text-xl text-brand-100 mb-10 max-w-2xl mx-auto">
-          Building confidence, water safety, and proper technique — from beginner splashes to advanced strokes.
-        </p>
-        <Link
-          id="hero-cta"
-          href="/contact"
-          className="inline-block bg-highlight-500 text-white font-bold px-10 py-4 rounded-full hover:bg-highlight-600 transition text-lg shadow-lg"
-        >
-          Enquire Now
-        </Link>
-      </section>
-
-      {/* Photo band */}
-      <section className="relative h-64 md:h-96 w-full">
+      {/* Hero over photo */}
+      <section className="relative flex items-center justify-center md:justify-end px-6 md:px-12 py-20 md:py-28">
         <Image
           src="/home-banner.jpg"
           alt="A swim instructor guiding a young child during a lesson at an outdoor pool"
           fill
           priority
           sizes="100vw"
-          className="object-cover"
+          className="object-cover object-top"
         />
+        <div className="relative z-10 w-full max-w-xl text-center bg-brand-900/95 text-white rounded-3xl px-8 py-12 shadow-2xl">
+          <h1 className="text-4xl md:text-5xl font-bold mb-4 leading-tight">
+            Swimming Lessons for Kids<br className="hidden md:block" /> in Singapore
+          </h1>
+          <p className="text-lg md:text-xl text-brand-100 mb-10 max-w-md mx-auto">
+            Building confidence, water safety, and proper technique — from beginner splashes to advanced strokes.
+          </p>
+          <Link
+            id="hero-cta"
+            href="/contact"
+            className="inline-block bg-highlight-500 text-white font-bold px-10 py-4 rounded-full hover:bg-highlight-600 transition text-lg shadow-lg"
+          >
+            Enquire Now
+          </Link>
+        </div>
       </section>
 
       {/* Why SwimKidsSG */}
