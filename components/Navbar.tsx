@@ -8,6 +8,7 @@ const links = [
   { href: '/', label: 'Home' },
   { href: '/blog', label: 'Blog' },
   { href: '/contact', label: 'Contact' },
+  { href: '/coaches', label: 'For Coaches' },
 ]
 
 export default function Navbar() {

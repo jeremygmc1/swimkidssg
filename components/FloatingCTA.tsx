@@ -21,7 +21,7 @@ export default function FloatingCTA() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [isHome])
 
-  if (pathname === '/contact') return null
+  if (pathname === '/contact' || pathname === '/coaches') return null
   if (isHome && !pastHeroCta) return null
 
   return (

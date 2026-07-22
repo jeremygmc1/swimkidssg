@@ -63,3 +63,10 @@ export const FIELDS: FieldConfig[] = [
   },
 ]
 // ─────────────────────────────────────────────────────────────────────────────
+
+// ── Coach sign-up form (writes to the "Coaches" sheet tab) ───────────────────
+export const COACH_FIELDS: FieldConfig[] = [
+  { name: 'name',  label: 'Name',         type: 'text',  required: true, maxLength: 100 },
+  { name: 'phone', label: 'Phone Number', type: 'phone', required: true, maxLength: 10 },
+]
+// ─────────────────────────────────────────────────────────────────────────────

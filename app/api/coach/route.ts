@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { appendRow } from '@/lib/sheets'
-import { FIELDS } from '@/lib/fields'
+import { COACH_FIELDS } from '@/lib/fields'
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true })
   }
 
-  const missing = FIELDS.filter((f) => f.required && !body[f.name]?.toString().trim())
+  const missing = COACH_FIELDS.filter((f) => f.required && !body[f.name]?.toString().trim())
   if (missing.length > 0) {
     return NextResponse.json(
       { error: `Missing required fields: ${missing.map((f) => f.label).join(', ')}` },
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const tooLong = FIELDS.filter(
+  const tooLong = COACH_FIELDS.filter(
     (f) => f.maxLength && (body[f.name]?.toString().length ?? 0) > f.maxLength
   )
   if (tooLong.length > 0 || (body.phone_code?.toString().length ?? 0) > 5) {
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     'Date Submitted': new Date().toLocaleString('en-SG', { timeZone: 'Asia/Singapore' }),
   }
 
-  for (const field of FIELDS) {
+  for (const field of COACH_FIELDS) {
     if (field.type === 'phone') {
       row[field.label] = `${body[`${field.name}_code`] ?? ''} ${body[field.name] ?? ''}`.trim()
     } else {
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    await appendRow(row, 'Parents')
+    await appendRow(row, 'Coaches')
     return NextResponse.json({ success: true })
   } catch (err) {
     console.error('Sheets error:', err)

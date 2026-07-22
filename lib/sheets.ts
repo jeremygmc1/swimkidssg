@@ -12,7 +12,7 @@ function getAuth() {
   })
 }
 
-export async function appendRow(data: Record<string, string>) {
+export async function appendRow(data: Record<string, string>, tab = 'Parents') {
   const auth = getAuth()
   const sheets = google.sheets({ version: 'v4', auth })
 
@@ -23,7 +23,7 @@ export async function appendRow(data: Record<string, string>) {
 
   await sheets.spreadsheets.values.append({
     spreadsheetId: sheetId,
-    range: 'Sheet1!A1',
+    range: `${tab}!A1`,
     valueInputOption: 'RAW',
     insertDataOption: 'INSERT_ROWS',
     requestBody: { values },
