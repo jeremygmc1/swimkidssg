@@ -2,6 +2,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { getAllPosts } from '@/lib/mdx'
 import BlogCard from '@/components/BlogCard'
+import heroBanner from '@/assets/home-banner-2.jpg'
 
 export default function HomePage() {
   const latestPosts = getAllPosts().slice(0, 3)
@@ -9,29 +10,33 @@ export default function HomePage() {
   return (
     <>
       {/* Hero over photo */}
-      <section className="relative flex items-center justify-center md:justify-end px-6 md:px-12 py-20 md:py-28">
-        <Image
-          src="/home-banner.jpg"
-          alt="A swim instructor guiding a young child during a lesson at an outdoor pool"
-          fill
-          priority
-          sizes="100vw"
-          className="object-cover object-top"
-        />
-        <div className="relative z-10 w-full max-w-xl text-center bg-brand-900/95 text-white rounded-3xl px-8 py-12 shadow-2xl">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4 leading-tight">
-            Swimming Lessons for Kids<br className="hidden md:block" /> in Singapore
-          </h1>
-          <p className="text-lg md:text-xl text-brand-100 mb-10 max-w-md mx-auto">
-            Building confidence, water safety, and proper technique — from beginner splashes to advanced strokes.
-          </p>
-          <Link
-            id="hero-cta"
-            href="/contact"
-            className="inline-block bg-highlight-500 text-white font-bold px-10 py-4 rounded-full hover:bg-highlight-600 transition text-lg shadow-lg"
-          >
-            Enquire Now
-          </Link>
+      <section className="bg-brand-900">
+        <div className="relative mx-auto max-w-6xl">
+          <Image
+            src={heroBanner}
+            alt="A swim coach guiding two children with a kickboard during a swimming lesson in a lane pool"
+            priority
+            placeholder="blur"
+            sizes="100vw"
+            className="h-[26rem] w-full object-cover object-left md:h-auto md:object-center"
+          />
+          <div className="absolute inset-0 flex items-center justify-center p-4 md:justify-end md:p-0 md:pr-[6%]">
+            <div className="w-full max-w-[15rem] rounded-2xl bg-brand-900/85 px-5 py-5 text-center text-white shadow-xl backdrop-blur-sm md:max-w-sm md:rounded-3xl md:px-7 md:py-8">
+              <h1 className="mb-2 text-lg font-bold leading-tight md:mb-3 md:text-3xl">
+                Swimming Lessons for Kids in Singapore
+              </h1>
+              <p className="mb-4 text-xs text-brand-100 md:mb-6 md:text-sm">
+                Building confidence, water safety, and proper technique — from beginner splashes to advanced strokes.
+              </p>
+              <Link
+                id="hero-cta"
+                href="/contact"
+                className="inline-block rounded-full bg-highlight-500 px-6 py-2.5 text-sm font-bold text-white shadow-lg transition hover:bg-highlight-600 md:px-8 md:py-3 md:text-base"
+              >
+                Enquire Now
+              </Link>
+            </div>
+          </div>
         </div>
       </section>
 
