@@ -16,6 +16,7 @@ export default function Footer() {
           <Link href="/" className="hover:text-cyan-400 transition">Home</Link>
           <Link href="/blog" className="hover:text-cyan-400 transition">Blog</Link>
           <Link href="/contact" className="hover:text-cyan-400 transition">Contact</Link>
+          <Link href="/coaches" className="hover:text-cyan-400 transition">For Coaches</Link>
         </div>
         <p className="text-sm text-brand-100">
           © {new Date().getFullYear()} SwimKidsSG. All rights reserved.
