@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { appendRow } from '@/lib/sheets'
+import { notifyNewLead } from '@/lib/notify'
 import { COACH_FIELDS } from '@/lib/fields'
 
 export async function POST(req: NextRequest) {
@@ -43,6 +44,7 @@ export async function POST(req: NextRequest) {
 
   try {
     await appendRow(row, 'Coaches')
+    await notifyNewLead('New coach enquiry', row)
     return NextResponse.json({ success: true })
   } catch (err) {
     console.error('Sheets error:', err)
