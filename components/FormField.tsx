@@ -1,4 +1,5 @@
 import type { FieldConfig } from '@/lib/fields'
+import FileUploadField from './FileUploadField'
 
 const COUNTRY_CODES = [
   { code: '+65', label: '🇸🇬 +65 (SG)' },
@@ -20,11 +21,13 @@ type Props = {
   field: FieldConfig
   value: string
   phoneCode?: string
+  otherValue?: string
   onChange: (name: string, value: string) => void
 }
 
-export default function FormField({ field, value, phoneCode, onChange }: Props) {
+export default function FormField({ field, value, phoneCode, otherValue, onChange }: Props) {
   const { name, label, type, required, options, min, max, maxLength, placeholder, helpText } = field
+  const selected = value ? value.split(',') : []
 
   return (
     <div className="flex flex-col gap-1">
@@ -72,6 +75,61 @@ export default function FormField({ field, value, phoneCode, onChange }: Props) 
             <option key={o} value={o}>{o}</option>
           ))}
         </select>
+      )}
+
+      {type === 'file' && (
+        <FileUploadField field={field} value={value} onChange={onChange} />
+      )}
+
+      {type === 'radio' && (
+        <div className="flex gap-6 pt-1">
+          {options?.map((o) => (
+            <label key={o} className="flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="radio"
+                name={name}
+                value={o}
+                checked={value === o}
+                required={required}
+                onChange={(e) => onChange(name, e.target.value)}
+                className="accent-brand-500"
+              />
+              {o}
+            </label>
+          ))}
+        </div>
+      )}
+
+      {type === 'multiselect' && (
+        <div className="flex flex-col gap-2 pt-1">
+          {options?.map((o) => (
+            <label key={o} className="flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={selected.includes(o)}
+                onChange={() => {
+                  const next = selected.includes(o)
+                    ? selected.filter((s) => s !== o)
+                    : [...selected, o]
+                  onChange(name, next.join(','))
+                }}
+                className="accent-brand-500"
+              />
+              {o}
+            </label>
+          ))}
+          {selected.includes('Others') && (
+            <input
+              type="text"
+              value={otherValue ?? ''}
+              required={required}
+              maxLength={100}
+              placeholder="Please specify"
+              onChange={(e) => onChange(`${name}_other`, e.target.value)}
+              className={base}
+            />
+          )}
+        </div>
       )}
 
       {type === 'textarea' && (
