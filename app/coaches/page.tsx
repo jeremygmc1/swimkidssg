@@ -18,7 +18,7 @@ export default function CoachesPage() {
         looking for lessons.
       </p>
       <p className="text-gray-500 mb-10">
-        Leave your name and number below and we&apos;ll reach out to tell you more about joining.
+        Tell us a bit about yourself below and we&apos;ll reach out to tell you more about joining.
       </p>
       <ContactForm
         fields={COACH_FIELDS}

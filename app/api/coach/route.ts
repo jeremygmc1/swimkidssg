@@ -23,7 +23,10 @@ export async function POST(req: NextRequest) {
   const tooLong = COACH_FIELDS.filter(
     (f) => f.maxLength && (body[f.name]?.toString().length ?? 0) > f.maxLength
   )
-  if (tooLong.length > 0 || (body.phone_code?.toString().length ?? 0) > 5) {
+  const otherTooLong = COACH_FIELDS.some(
+    (f) => f.type === 'multiselect' && (body[`${f.name}_other`]?.toString().length ?? 0) > 100
+  )
+  if (tooLong.length > 0 || otherTooLong || (body.phone_code?.toString().length ?? 0) > 5) {
     return NextResponse.json(
       { error: `Field too long: ${tooLong.map((f) => f.label).join(', ') || 'phone code'}` },
       { status: 400 }
@@ -34,9 +37,25 @@ export async function POST(req: NextRequest) {
     'Date Submitted': new Date().toLocaleString('en-SG', { timeZone: 'Asia/Singapore' }),
   }
 
+  const SITE = 'https://www.swimkidssg.com'
+
   for (const field of COACH_FIELDS) {
     if (field.type === 'phone') {
       row[field.label] = `${body[`${field.name}_code`] ?? ''} ${body[field.name] ?? ''}`.trim()
+    } else if (field.type === 'file') {
+      row[field.label] = (body[field.name] ?? '')
+        .split('\n')
+        .map((p: string) => p.trim())
+        .filter(Boolean)
+        .map((p: string) => `${SITE}/api/coach-file?path=${encodeURIComponent(p)}`)
+        .join('\n')
+    } else if (field.type === 'multiselect') {
+      const other = body[`${field.name}_other`]?.toString().trim()
+      row[field.label] = (body[field.name] ?? '')
+        .split(',')
+        .filter(Boolean)
+        .map((item: string) => (item === 'Others' && other ? `Others: ${other}` : item))
+        .join(', ')
     } else {
       row[field.label] = body[field.name] ?? ''
     }

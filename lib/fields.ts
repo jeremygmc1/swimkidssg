@@ -1,7 +1,7 @@
 export type FieldConfig = {
   name: string
   label: string
-  type: 'text' | 'email' | 'tel' | 'phone' | 'number' | 'select' | 'textarea'
+  type: 'text' | 'email' | 'tel' | 'phone' | 'number' | 'select' | 'textarea' | 'radio' | 'multiselect' | 'file'
   required: boolean
   options?: string[]
   min?: number
@@ -9,9 +9,16 @@ export type FieldConfig = {
   maxLength?: number
   placeholder?: string
   helpText?: string
+  /** For `file`: accepted types, e.g. '.pdf,.doc,.docx' */
+  accept?: string
+  /** For `file`: allow selecting multiple files */
+  multiple?: boolean
   /** Only render this field when another field currently has a specific value */
   showIf?: { field: string; value: string }
 }
+
+// For `multiselect`, an option literally named 'Others' reveals a free-text
+// "please specify" input; its value is stored in the companion `${name}_other`.
 
 // ── Add, remove, or reorder fields here ──────────────────────────────────────
 export const FIELDS: FieldConfig[] = [
@@ -66,7 +73,41 @@ export const FIELDS: FieldConfig[] = [
 
 // ── Coach sign-up form (writes to the "Coaches" sheet tab) ───────────────────
 export const COACH_FIELDS: FieldConfig[] = [
-  { name: 'name',  label: 'Name',         type: 'text',  required: true, maxLength: 100 },
-  { name: 'phone', label: 'Phone Number', type: 'phone', required: true, maxLength: 10 },
+  { name: 'name',  label: 'Name',           type: 'text',  required: true, maxLength: 100 },
+  { name: 'phone', label: 'Contact Number', type: 'phone', required: true, maxLength: 10 },
+  {
+    name: 'swimCert',
+    label: 'Swim Cert',
+    type: 'multiselect',
+    required: true,
+    options: ['NROC', 'SSI', 'AustSwim', 'STA', 'Others'],
+    maxLength: 200,
+  },
+  {
+    name: 'cprAed',
+    label: 'Do you have a valid CPR/AED license?',
+    type: 'radio',
+    required: true,
+    options: ['Yes', 'No'],
+  },
+  {
+    name: 'coachProfile',
+    label: 'Coach Profile',
+    type: 'file',
+    required: false,
+    accept: '.pdf,.doc,.docx',
+    helpText: 'Optional. Upload your coaching profile or CV (PDF or Word, max 8 MB).',
+  },
+  {
+    name: 'certs',
+    label: 'Certs',
+    type: 'file',
+    required: false,
+    multiple: true,
+    accept: '.pdf,.png,.jpg,.jpeg,.webp',
+    helpText:
+      'Optional. Upload your swim certs and valid CPR/AED license (PDF or image, max 8 MB each). You can select multiple files.',
+  },
+  { name: 'remarks', label: 'Remarks', type: 'textarea', required: false, maxLength: 2000 },
 ]
 // ─────────────────────────────────────────────────────────────────────────────

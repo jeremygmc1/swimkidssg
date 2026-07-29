@@ -19,6 +19,7 @@ function buildInitialState(fields: FieldConfig[]): FormState {
   for (const f of fields) {
     state[f.name] = ''
     if (f.type === 'phone') state[`${f.name}_code`] = '+65'
+    if (f.type === 'multiselect') state[`${f.name}_other`] = ''
   }
   state.company = '' // honeypot — hidden from humans, bots fill it
   return state
@@ -84,6 +85,7 @@ export default function ContactForm({
           field={field}
           value={values[field.name]}
           phoneCode={values[`${field.name}_code`]}
+          otherValue={values[`${field.name}_other`]}
           onChange={handleChange}
         />
       ))}
