@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { upload } from '@vercel/blob/client'
 import type { FieldConfig } from '@/lib/fields'
 
@@ -20,9 +20,13 @@ export default function FileUploadField({ field, value, onChange }: Props) {
   const [error, setError] = useState('')
 
   // Clear the displayed files when the form resets the value externally.
-  useEffect(() => {
+  // Adjusting state during render (React's recommended pattern) rather than in
+  // an effect avoids an extra render pass on reset.
+  const [prevValue, setPrevValue] = useState(value)
+  if (value !== prevValue) {
+    setPrevValue(value)
     if (!value) setItems([])
-  }, [value])
+  }
 
   function commit(next: Item[]) {
     setItems(next)

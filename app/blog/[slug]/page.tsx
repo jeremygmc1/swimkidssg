@@ -12,8 +12,13 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
-  const post = getPostBySlug(slug)
-  return { title: post.title, description: post.excerpt }
+  try {
+    const post = getPostBySlug(slug)
+    return { title: post.title, description: post.excerpt }
+  } catch {
+    // Unknown slug: let the page component render the 404 instead of throwing here.
+    return {}
+  }
 }
 
 export default async function PostPage({ params }: Props) {
