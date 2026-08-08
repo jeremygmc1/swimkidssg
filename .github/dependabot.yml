@@ -1,0 +1,40 @@
+# Dependabot configuration — automated dependency & GitHub Actions updates.
+# Free for private repositories. Complements the SCA scanning in CI.
+# Docs: https://docs.github.com/code-security/dependabot
+version: 2
+updates:
+  # Application dependencies (npm)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Singapore"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+    # Group low-risk updates so we get fewer, reviewable PRs.
+    groups:
+      production-dependencies:
+        dependency-type: "production"
+        update-types:
+          - "minor"
+          - "patch"
+      development-dependencies:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Keep the GitHub Actions used by our CI workflows patched & pinned.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Singapore"
+    labels:
+      - "dependencies"
+      - "github-actions"

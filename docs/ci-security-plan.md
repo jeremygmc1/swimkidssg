@@ -66,11 +66,19 @@ All security jobs upload **SARIF** → GitHub code scanning.
 
 ## 4. Phased rollout
 
-### Phase 0 — Repo hardening (settings, no code)
+### Phase 0 — Repo hardening (settings + config-as-code)
 - Enable **Secret Scanning + Push Protection** and **Dependabot alerts** in
   repo Security settings.
 - Set default workflow token to **read-only**; grant per-job scopes.
 - Draft **branch protection** on `main` (required checks added as they go green).
+- Commit `.github/dependabot.yml` + `SECURITY.md`.
+
+> **Private-repo caveat.** This repo is **private**, so GitHub-native Secret
+> Scanning/Push Protection and CodeQL SARIF-to-Security-tab require paid add-ons
+> (**Secret Protection** / **Code Security**). Dependabot, read-only tokens, and
+> branch protection are free. If staying free, run the scanners as Actions jobs
+> that **fail the build** instead of uploading SARIF. Full breakdown and exact
+> commands: **`docs/phase-0-hardening.md`**.
 
 ### Phase 1 — Foundation CI (`ci.yml`) — *blocking from day one*
 Triggers: `pull_request` + `push` to `main`.
