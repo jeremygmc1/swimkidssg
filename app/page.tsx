@@ -75,7 +75,7 @@ export default function HomePage() {
       <section className="bg-cyan-500 text-white py-16 px-6 text-center">
         <h2 className="text-3xl font-bold mb-4">Ready to make a splash?</h2>
         <p className="text-white/80 mb-8 max-w-xl mx-auto">
-          Spots fill up fast. Get in touch today and we'll find the right programme for your child.
+          Spots fill up fast. Get in touch today and we&apos;ll find the right programme for your child.
         </p>
         <Link
           href="/contact"

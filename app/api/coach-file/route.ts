@@ -1,5 +1,7 @@
 import { get } from '@vercel/blob'
 import { NextResponse } from 'next/server'
+import { timingSafeEqual } from 'crypto'
+import { authLimiter, isRateLimited, clientIp } from '@/lib/ratelimit'
 
 // Streams a private coach-uploaded file behind HTTP Basic Auth.
 // The sheet/Telegram store links to this route; opening one prompts for the
@@ -15,11 +17,22 @@ function isAuthorized(request: Request): boolean {
   const header = request.headers.get('authorization')
   if (!header?.startsWith('Basic ')) return false
   const decoded = Buffer.from(header.slice(6), 'base64').toString() // "user:pass"
-  return decoded.slice(decoded.indexOf(':') + 1) === password
+  const provided = decoded.slice(decoded.indexOf(':') + 1)
+  // Constant-time compare to avoid leaking the password via timing.
+  const a = Buffer.from(provided)
+  const b = Buffer.from(password)
+  return a.length === b.length && timingSafeEqual(a, b)
 }
 
 export async function GET(request: Request): Promise<NextResponse> {
-  if (!isAuthorized(request)) return UNAUTHORIZED
+  if (!isAuthorized(request)) {
+    // Throttle repeated failed attempts (incl. the credential-less first hit)
+    // per IP to make password guessing impractical.
+    if (await isRateLimited(authLimiter, clientIp(request))) {
+      return new NextResponse('Too many attempts. Please try again later.', { status: 429 })
+    }
+    return UNAUTHORIZED
+  }
 
   const path = new URL(request.url).searchParams.get('path')
   if (!path) return new NextResponse('Missing file path', { status: 400 })
