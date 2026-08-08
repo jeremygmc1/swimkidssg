@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@vercel/analytics": "^2.0.1",
     "@vercel/blob": "^2.6.1",
     "googleapis": "^173.0.0",
     "gray-matter": "^4.0.3",
