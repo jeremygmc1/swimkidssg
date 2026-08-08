@@ -9,6 +9,8 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@upstash/ratelimit": "^2.0.8",
+    "@upstash/redis": "^1.38.2",
     "@vercel/blob": "^2.6.1",
     "googleapis": "^173.0.0",
     "gray-matter": "^4.0.3",

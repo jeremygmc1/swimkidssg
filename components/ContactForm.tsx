@@ -2,7 +2,10 @@
 
 import { useState } from 'react'
 import FormField from './FormField'
+import Turnstile from './Turnstile'
 import { FIELDS, type FieldConfig } from '@/lib/fields'
+
+const TURNSTILE_ENABLED = !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
 
 type FormState = Record<string, string>
 
@@ -35,6 +38,8 @@ export default function ContactForm({
   const [values, setValues] = useState<FormState>(() => buildInitialState(fields))
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState('')
+  const [turnstileToken, setTurnstileToken] = useState('')
+  const [turnstileReset, setTurnstileReset] = useState(0)
 
   function handleChange(name: string, value: string) {
     setValues((prev) => {
@@ -49,13 +54,20 @@ export default function ContactForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+
+    if (TURNSTILE_ENABLED && !turnstileToken) {
+      setErrorMsg('Please complete the verification below.')
+      setStatus('error')
+      return
+    }
+
     setStatus('loading')
     setErrorMsg('')
 
     const res = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(values),
+      body: JSON.stringify({ ...values, turnstileToken }),
     })
 
     if (res.ok) {
@@ -66,6 +78,9 @@ export default function ContactForm({
       setErrorMsg(data.error ?? 'Something went wrong.')
       setStatus('error')
     }
+    // Turnstile tokens are single-use — reset for the next attempt either way.
+    setTurnstileToken('')
+    setTurnstileReset((k) => k + 1)
   }
 
   if (status === 'success') {
@@ -102,6 +117,8 @@ export default function ContactForm({
           onChange={(e) => handleChange('company', e.target.value)}
         />
       </div>
+
+      <Turnstile onVerify={setTurnstileToken} resetKey={turnstileReset} />
 
       {status === 'error' && (
         <p className="text-sm text-red-600">{errorMsg}</p>

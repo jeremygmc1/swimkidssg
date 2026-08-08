@@ -1,9 +1,17 @@
 import { handleUpload, type HandleUploadBody } from '@vercel/blob/client'
 import { NextResponse } from 'next/server'
+import { uploadLimiter, isRateLimited, clientIp } from '@/lib/ratelimit'
 
 // Issues short-lived client tokens for direct browser → Vercel Blob uploads.
 // The read-write token is custom-named, so it's passed explicitly.
 export async function POST(request: Request): Promise<NextResponse> {
+  if (await isRateLimited(uploadLimiter, clientIp(request))) {
+    return NextResponse.json(
+      { error: 'Too many upload requests. Please try again later.' },
+      { status: 429 }
+    )
+  }
+
   const body = (await request.json()) as HandleUploadBody
 
   try {
