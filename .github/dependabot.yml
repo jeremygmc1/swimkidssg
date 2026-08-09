@@ -18,8 +18,10 @@ updates:
           - minor
           - patch
 
-  # The GitHub Actions we pin in .github/workflows are dependencies too —
-  # keep them patched so the pipeline itself doesn't rot or ship a known CVE.
+  # The GitHub Actions in .github/workflows are pinned to commit SHAs (see
+  # ci.yml). They're dependencies too, so Dependabot bumps the pinned SHA —
+  # and its version comment — on each release, keeping the pin current without
+  # giving up the supply-chain safety of a SHA over a mutable tag.
   - package-ecosystem: github-actions
     directory: "/"
     schedule:

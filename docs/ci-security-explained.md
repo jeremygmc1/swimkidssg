@@ -87,7 +87,10 @@ Two SAST tools because they have different strengths:
 - **CodeQL** treats your code as a *database you can query*. GitHub wrote deep security
   queries ("find data flowing from user input to a dangerous sink") that run against it.
   It's slower but does real **taint tracking** — following an attacker-controlled value
-  across functions and files. GitHub-native, free for public repos, results in the Security tab.
+  across functions and files. GitHub-native and results land in the Security tab. It's
+  **free on public repos** (like this one); on a **private** repo CodeQL requires **GitHub
+  Advanced Security** unless already enabled. Semgrep, below, runs in plain CI and is free
+  either way — so it's the fallback if this repo ever goes private without GHAS.
 - **Semgrep** is pattern-matching on steroids — fast, and its community rule packs
   (`p/nextjs`, `p/react`, `p/owasp-top-ten`) know framework-specific footguns. We run it
   **diff-aware** on PRs (`--baseline-commit`) so developers only see problems *their* change

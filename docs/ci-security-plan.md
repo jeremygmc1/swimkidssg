@@ -36,14 +36,23 @@ Plus the table-stakes CI gates (typecheck, lint, build) that everything else dep
 
 ## 2. Tooling decisions (all free for this repo)
 
+> **Cost note.** This repository is **public**, so the whole stack below — CodeQL,
+> Secret Scanning, and Push Protection included — is **free**. Those three GitHub-native
+> features are free only on public repos; on a **private** repo they require **GitHub
+> Advanced Security** (unless already licensed). (The `"private": true` in `package.json`
+> is unrelated — that's npm's *publish guard* to stop accidental `npm publish`, not the
+> repo's GitHub visibility.) If this repo ever goes private, either enable GHAS or drop
+> CodeQL/native secret scanning and lean on the CI-based Semgrep + Gitleaks jobs, which
+> are free regardless of visibility.
+
 | Layer | Tool | Why this one |
 |---|---|---|
 | Base CI | GitHub Actions | Native, free for the repo, integrates with branch protection |
 | Typecheck / Lint / Build | `tsc`, ESLint (`eslint-config-next`), `next build` | Already configured; make them gates |
-| **SAST** | **CodeQL** (`javascript-typescript`) | GitHub-native, free for public repos, best-in-class JS/TS taint analysis, results in the Security tab |
+| **SAST** | **CodeQL** (`javascript-typescript`) | GitHub-native, free on public repos (private needs GHAS), best-in-class JS/TS taint analysis, results in the Security tab |
 | **SAST (supplementary)** | **Semgrep** (`p/javascript`, `p/react`, `p/nextjs`, `p/owasp-top-ten`) | Fast, framework-aware rules; catches Next-specific patterns CodeQL misses |
 | **SCA** | **Dependabot** + **`npm audit`** (+ optional **Trivy fs**) | Dependabot for automated PRs; audit as a gate; Trivy for a second opinion + license view |
-| **Secret scanning** | **GitHub Secret Scanning + Push Protection**, plus **Gitleaks** in CI | Native push protection blocks secrets pre-merge; Gitleaks scans full history/diffs |
+| **Secret scanning** | **GitHub Secret Scanning + Push Protection** (free on public repos; private needs GHAS), plus **Gitleaks** in CI | Native push protection blocks secrets pre-merge; Gitleaks scans full history/diffs and is free either way |
 | **IaC / config** | **Trivy config** / **Checkov** (light) | Scans workflow + config; low volume here but cheap to add |
 | **DAST** | **OWASP ZAP** (Baseline + optional Full/API scan) against the Vercel preview URL | The industry-standard free DAST; Baseline is passive & PR-safe, API scan drives the OpenAPI-less routes |
 
@@ -200,7 +209,7 @@ patch updates, quarterly review of scanner rules and severity thresholds.
 
 - **Container/K8s scanning** — no Dockerfile; app runs on Vercel's platform. Add Trivy
   `image` only if containerisation is introduced.
-- **License-compliance enforcement** — out of scope for a private marketing site; Trivy
+- **License-compliance enforcement** — out of scope for a small marketing site; Trivy
   surfaces licenses if needed later.
 - **Load/perf testing** — not a security control; separate concern.
 - **Paid DAST/pentest** — the free ZAP + CodeQL stack is sufficient at this scale; revisit
