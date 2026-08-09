@@ -1,0 +1,29 @@
+# Phase 1 — Software Composition Analysis (SCA), the automated half.
+# Dependabot watches our dependencies for new versions (and, together with
+# GitHub's advisory database, for known vulnerabilities) and opens PRs to
+# bump them. CI then runs on those PRs, so an update only merges if it builds.
+version: 2
+updates:
+  # First-party npm dependencies.
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    # Group low-risk patch/minor bumps into one PR to cut review noise;
+    # major bumps stay separate so breaking changes get their own review.
+    groups:
+      npm-minor-patch:
+        update-types:
+          - minor
+          - patch
+
+  # The GitHub Actions in .github/workflows are pinned to commit SHAs (see
+  # ci.yml). They're dependencies too, so Dependabot bumps the pinned SHA —
+  # and its version comment — on each release, keeping the pin current without
+  # giving up the supply-chain safety of a SHA over a mutable tag.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
