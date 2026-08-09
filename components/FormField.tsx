@@ -34,7 +34,7 @@ export default function FormField({ field, value, phoneCode, otherValue, onChang
       <label htmlFor={name} className="text-sm font-medium text-gray-700">
         {label}{required && <span className="text-red-500 ml-1">*</span>}
       </label>
-      {helpText && <p className="text-xs text-gray-400">{helpText}</p>}
+      {helpText && <p className="text-xs text-gray-500">{helpText}</p>}
 
       {type === 'phone' && (
         <div className="flex gap-2">
