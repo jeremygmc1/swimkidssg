@@ -169,12 +169,15 @@ Also add `"typecheck": "tsc --noEmit"` to `package.json` scripts.
 
 ## 6. Rollout phases (recommended order)
 
-**Phase 1 — Foundation (day 1).** Add `ci.yml` (typecheck/lint/build) + `dependabot.yml`.
-Turn on GitHub Secret Scanning + Push Protection. Enable branch protection requiring these
-checks. *Low risk, immediate value.*
+**Phase 1 — Foundation (day 1). ✅ Shipped.** `ci.yml` (typecheck/lint/build) +
+`dependabot.yml`; GitHub Secret Scanning + Push Protection enabled; branch protection on
+`main` requires the CI check. *Low risk, immediate value.*
 
-**Phase 2 — SAST + secrets in CI (week 1).** Add CodeQL, Semgrep (diff mode), Gitleaks.
-Run in **report-only** first; fix the initial backlog; then flip High/Critical to **blocking**.
+**Phase 2 — SAST + secrets in CI. ✅ Shipped (report-only).** `codeql.yml` (CodeQL JS/TS,
+`security-extended`, weekly cron) and `sast.yml` (Semgrep rule packs + Gitleaks). All run
+**report-only** — `continue-on-error` keeps them off the merge path while findings flow to
+the Security tab. Triage the initial backlog, then drop `continue-on-error` and add them as
+required status checks to promote High/Critical to **blocking**.
 
 **Phase 3 — SCA hardening (week 1–2).** Add `npm audit` gate + Trivy. Clear the current
 advisory backlog, then make High/Critical blocking.
