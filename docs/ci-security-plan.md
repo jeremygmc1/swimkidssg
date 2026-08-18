@@ -182,9 +182,11 @@ required status checks to promote High/Critical to **blocking**.
 **Phase 3 — SCA hardening (week 1–2).** Add `npm audit` gate + Trivy. Clear the current
 advisory backlog, then make High/Critical blocking.
 
-**Phase 4 — DAST (week 2–3).** Add ZAP Baseline against previews (non-blocking → warning).
-Once alerts are tuned and clean, promote High alerts to blocking. Add the Full/API scan on
-`main` + weekly cron.
+**Phase 4 — DAST. ✅ Shipped (report-only, Option A).** `dast.yml` runs an OWASP ZAP
+Baseline scan against the Vercel preview, triggered by the `deployment_status` event the
+Vercel bot emits — so no Vercel tokens and no double deploys. Alerts are tuned in
+`.zap/rules.tsv`; the scan is non-blocking (`fail_action: false`). Once alerts are clean,
+promote High alerts to blocking, and add the Full/API active scan on `main` + weekly cron.
 
 **Phase 5 — Steady state.** Weekly scheduled deep scans, Dependabot auto-merge for green
 patch updates, quarterly review of scanner rules and severity thresholds.
