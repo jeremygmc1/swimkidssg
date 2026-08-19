@@ -1,0 +1,49 @@
+# Phase 4 — DAST via OWASP ZAP (Option A: consume the Vercel bot's preview).
+#
+# Vercel's Git integration deploys a preview on every push and, when it's ready,
+# GitHub emits a `deployment_status` event carrying the live preview URL. We hook
+# onto that here instead of deploying from CI ourselves — no Vercel tokens, no
+# double builds. ZAP then runs a passive Baseline scan against the preview.
+#
+# NOTE: `deployment_status` workflows always run from the DEFAULT branch and only
+# fire after this file is merged to `main`. It will not run as a check on the PR
+# that adds it — expect the first real run on the next preview deploy post-merge.
+#
+# Report-only for now (`fail_action: false`): the scan surfaces findings without
+# blocking. Promote to a gate later by flipping fail_action to true.
+name: DAST
+
+on:
+  deployment_status:
+
+# Least privilege: just read the repo. (Issue writing is disabled below, so no
+# issues: write scope is needed.)
+permissions:
+  contents: read
+
+jobs:
+  zap-baseline:
+    name: ZAP Baseline (preview)
+    runs-on: ubuntu-latest
+    # Only scan a *successful preview* deploy — never production, and never the
+    # in-progress/failed states. Vercel labels prod deploys "Production".
+    if: >-
+      github.event.deployment_status.state == 'success' &&
+      github.event.deployment_status.environment_url != '' &&
+      !contains(github.event.deployment_status.environment, 'Production')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: ZAP Baseline scan
+        uses: zaproxy/action-baseline@a418de766254e096fa7d9e30f8dc9662b58df224 # v0.9.0
+        with:
+          target: ${{ github.event.deployment_status.environment_url }}
+          # Alert tuning lives here — map noisy rules to IGNORE as they're triaged.
+          rules_file_name: .zap/rules.tsv
+          # Report-only during rollout: a finding must not fail the workflow yet.
+          fail_action: false
+          # Don't auto-open GitHub issues; the HTML/MD report artifact and the
+          # Actions job summary carry the findings. Flip to true for a tracking
+          # issue (also add `issues: write` to permissions above if you do).
+          allow_issue_writing: false

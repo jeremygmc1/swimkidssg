@@ -1,0 +1,19 @@
+# OWASP ZAP Baseline — alert tuning for the DAST workflow (.github/workflows/dast.yml).
+#
+# Format: one rule per line, TAB-separated:
+#     <ruleId>	<action>	<optional URL regex>
+# where <action> is one of:
+#     IGNORE  — suppress the alert entirely (a triaged false positive / accepted risk)
+#     WARN    — report but never fail (the default for every rule)
+#     FAIL    — treat as a failure (only meaningful once fail_action is enabled)
+#
+# Lines starting with '#' and blank lines are ignored, so this file is a safe
+# no-op until you add real entries. Every rule defaults to WARN, so nothing here
+# yet means "report everything, suppress nothing" — the right posture while the
+# baseline is still being triaged.
+#
+# Find a rule's numeric id in the scan's HTML/Markdown report artifact, then add
+# a line here to tune it, e.g. (leading '#' removed to activate):
+#
+#   10096	IGNORE	Timestamp disclosure — noisy on static asset hashes
+#   10063	IGNORE	Permissions-Policy header (tracked separately)
