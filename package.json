@@ -16,7 +16,7 @@
     "@vercel/blob": "^2.6.1",
     "googleapis": "^173.0.0",
     "gray-matter": "^4.0.3",
-    "next": "^16.2.10",
+    "next": "^16.3.4",
     "next-mdx-remote": "^6.0.0",
     "react": "^19",
     "react-dom": "^19"
