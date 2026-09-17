@@ -220,3 +220,106 @@ Add the new vars to `.env.local.example` too, matching the existing explicit-nam
   Decap) delivers the same outcome via a config file instead of ~10 files of bespoke,
   security-sensitive code — cost is a one-time GitHub OAuth proxy and less control over
   validation. Fix #1 still applies there, since it's about MDX, not the editor.
+
+---
+
+## 11. Risk of breaking the currently-deployed app
+
+The current site keeps serving throughout — **the only way this work takes the public site down is
+a failed `next build`, and Vercel freezes on the last good deploy when a build fails** (site stays
+up, but stops updating and the author sees no error). So the risks below are ranked by likelihood
+of a broken or frozen deploy, with the mitigation that keeps each contained.
+
+| Risk | How it breaks things | Likelihood | Mitigation |
+|---|---|---|---|
+| **New editor deps incompatible with React 19 / Next 16** | TipTap or `@uiw/react-md-editor` peer-dep conflict → `npm install`/`npm run build` fails → deploy frozen | Medium | Verify the chosen editor supports React 19 **before** merging; pin exact versions; confirm `npm run build` is green in CI on the feature branch. This is the single most likely breakage. |
+| **Type/lint error in the ~10 new files** | `next build` runs `tsc`/eslint → any error fails the whole build → deploy frozen | Medium | The existing CI gates (typecheck/lint/build) catch this on the PR before it reaches `main`. Do not bypass them. |
+| **Secret read at module scope** | `const token = process.env.POSTS_GITHUB_TOKEN!` evaluated at import time can fail the build or crash a shared chunk | Low–Med | Read env **inside** the request handler, mirror the fail-soft pattern in `lib/ratelimit.ts`/`lib/notify.ts`. Never `!`-assert at module top level. |
+| **A published post compiles but renders wrong** | Cosmetic only — live, ugly, not "broken." No build failure. | Medium | Preview-before-publish (§7). Not a deploy risk; a quality risk. |
+| **`next.config.ts` image config touched** | It currently sets `dangerouslyAllowSVG` + a strict CSP. Editing it for editor image previews could weaken CSP site-wide or break `next/image` on public pages | Low | Author images are local `/blog/...` paths → **no `remotePatterns` change needed**. Leave `next.config.ts` alone. |
+| **Global layout/nav edited to add an `/admin` link** | A change to `app/layout.tsx` / `Navbar` touches every page | Low | Don't add a public nav link. Reach `/admin` by direct URL. Zero change to shared layout. |
+| **Basic-auth on the `/admin` *page* (not just APIs)** | With middleware dropped (fix #3), a server component can't cleanly emit a 401 + `WWW-Authenticate` challenge, so naïve gating either fails to prompt or leaks a rendered shell | Med (impl. correctness) | Make `/admin` a shell that renders nothing sensitive and fetches all data/actions from **authed `/api/admin/*` route handlers** — the browser's Basic-auth prompt fires on the first 401 from those. Secrets and post content never live in the page payload. |
+| **Concurrent publish races a Jeremy push to `main`** | Non-fast-forward ref update → lost write or failed publish | Low | `commitFiles` 409 retry (already in §4). |
+| **Runtime `fs` reads in admin** | Covered by fix #2 — admin reads via GitHub API, not `fs` | — | Already designed out. |
+
+**What is _not_ at risk:** the public blog rendering path (`lib/mdx.ts`, `app/blog/**`,
+`Carousel`) is untouched by this feature. All new code lives under `/admin`, `/api/admin`, and new
+`lib/*` modules imported only by those. Route-level code-splitting keeps the editor bundle off
+public pages. **Not using middleware (fix #3) also removes the highest-blast-radius failure mode** —
+a broad middleware `matcher` mistakenly 401-ing `/` and static assets.
+
+### Pre-cutover gate (all must pass on the feature branch before merge to `main`)
+1. `npm run build` green **with the new editor dep installed** (proves peer-dep + bundle).
+2. `npm run typecheck` and `npm run lint` green.
+3. A test publish pointed at a **scratch branch** (not `main`) lands a correct commit and the
+   resulting build is green.
+4. Visit `/blog` and 2–3 existing posts on the branch preview → byte-for-byte identical to prod
+   (proves the public path is untouched).
+
+---
+
+## 12. Migrating the 7 existing articles into the new system
+
+### 12.1 What migrates cleanly, and what doesn't
+
+| Posts | Body | New system fit |
+|---|---|---|
+| `welcome-to-swimkidssg`, `water-safety-tips-for-kids`, `swimming-levels-explained` | Pure Markdown, no MDX | **Fully editable as-is.** Open, edit, publish — no conversion. |
+| `9-signs…`, `confident-in-water…`, `private-vs-group…`, `why-your-child-isnt-progressing…` | Each has one `<Carousel><img …/></Carousel>` at the top | **Will not round-trip.** A Markdown-only editor can't emit `<Carousel>`; `neutralizeMdx` (fix #1) would reject/strip the JSX, silently dropping the image on save. |
+
+Facts that make migration easy either way: all four images already live at `/blog/<slug>/<file>`
+(the exact convention the new system uses), each Carousel holds **exactly one** image, and
+frontmatter is already uniform (`title/date/author/lastEdited/excerpt`, all quoted → no
+MDX-hostile characters). No `coverImage` field is in use yet, and the blog template does not
+render one today.
+
+### 12.2 Two migration strategies (ranked)
+
+**Option A — Additive, no content migration (recommended for launch).**
+The new system only *creates* new Markdown posts and *edits* the 3 pure-Markdown ones. The 4
+Carousel posts stay developer-managed via git.
+- Editor's edit-load step detects JSX (`/<[A-Z]/` or `<Carousel`) in the body and, if present,
+  **blocks editing** with: "This post contains a photo gallery and is edited by a developer."
+  The 3 clean posts open normally.
+- Risk to live content: **zero** — nothing about the existing posts changes.
+- Cost: the author can't self-edit 4 legacy posts. Acceptable, since the goal is *new* articles.
+
+**Option B — Full unification (do later, only if author must own all 7).**
+Convert the 4 Carousels to a first-class cover-image model so every post is editable through one
+path.
+- Add a `coverImage` (+ optional `coverCaption`) render block to `app/blog/[slug]/page.tsx`
+  (an optimized `next/image` + `<figcaption>`), rendered above the body.
+- Rewrite each of the 4 posts: move the single image to `coverImage:` / `coverCaption:` in
+  frontmatter and delete the `<Carousel>` block from the body. Bodies become pure Markdown.
+- The editor's image field then reads/writes `coverImage`; `<Carousel>` remains a
+  developer-only tool for genuine multi-image galleries (unchanged, still supported).
+- Risk: touches the **live** blog template and 4 **live** posts. Visual diff required — the
+  captioned single image should look equivalent to today's one-slide carousel; the arrows/dots
+  simply disappear (there was only ever one slide).
+- Cost/benefit: modest effort, and it removes the "some posts are magic" split. Not needed to
+  hit the stated goal.
+
+**Recommendation:** ship **Option A** with the new system; schedule **Option B** as a follow-up
+only if self-editing the legacy 4 becomes a real need.
+
+### 12.3 Execution — Option A (safe, no live-content change)
+1. Ship the admin feature (passing the §11 pre-cutover gate).
+2. Confirm the JSX-detection guard blocks the 4 Carousel posts and opens the 3 clean ones.
+3. Author test: edit `swimming-levels-explained` (clean) end-to-end → one commit, correct
+   frontmatter, `lastEdited` bumped, no duplicate file, deploy green, live page correct.
+4. Done. Existing content is byte-identical; only editability is added.
+
+### 12.4 Execution — Option B (if/when chosen), each step reversible
+1. On a feature branch, add `coverImage`/`coverCaption` rendering to `app/blog/[slug]/page.tsx`.
+2. Convert **one** post first (e.g. `9-signs…`): image → frontmatter, remove `<Carousel>`.
+3. Preview the branch: the converted post vs prod — confirm visual equivalence and that the
+   image still optimizes via `next/image`.
+4. If good, convert the remaining 3 in the same PR; diff each.
+5. Merge → one deploy re-renders all four. **Rollback** = revert the PR (posts and template move
+   back together; images never moved, so nothing to clean up).
+6. `<Carousel>` component stays in the repo for future multi-image posts.
+
+### 12.5 Rollback for the whole feature
+Because the feature is additive and isolated (§11), disabling it is: unset `ADMIN_PASSWORD` /
+`POSTS_GITHUB_TOKEN` (admin routes then refuse — fail-soft), or revert the feature PR. Neither
+affects the public blog, which never depended on any of it.
