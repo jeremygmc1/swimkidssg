@@ -29,6 +29,12 @@ const EXCERPT_MAX = 200
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 
+// True for a kebab-case slug — also the guard against path traversal in routes
+// that build repo paths from a slug.
+export function isValidSlug(slug: string): boolean {
+  return SLUG_RE.test(slug)
+}
+
 // A real calendar date in YYYY-MM-DD — rejects values JS silently rolls over
 // (e.g. 2026-02-30 → Mar 2).
 export function isValidDate(value: string): boolean {

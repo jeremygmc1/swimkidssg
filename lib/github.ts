@@ -112,6 +112,16 @@ export async function getPostRaw(slug: string): Promise<RawPost> {
   return { slug, data, content, sha: meta.sha }
 }
 
+// Repo-relative paths of the files directly under a directory (empty when the
+// directory does not exist). Used to delete a post's image folder on unpublish.
+export async function listDirFiles(dir: string): Promise<string[]> {
+  const res = await gh(`/repos/${repo()}/contents/${dir}`)
+  if (res.status === 404) return []
+  if (!res.ok) throw new Error(`GitHub GET ${dir} → ${res.status}`)
+  const entries = (await res.json()) as ContentEntry[]
+  return entries.filter((e) => e.type === 'file').map((e) => e.path)
+}
+
 // Current blob SHA for a path, or null when it does not exist.
 export async function getFileSha(path: string): Promise<string | null> {
   const res = await gh(`/repos/${repo()}/contents/${path}`)
