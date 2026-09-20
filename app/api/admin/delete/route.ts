@@ -26,7 +26,7 @@ export async function POST(request: Request) {
   }
 
   const slug = payload.slug?.trim() ?? ''
-  const branch = payload.branch?.trim() || 'main'
+  const branch = payload.branch?.trim() || process.env.POSTS_TARGET_BRANCH || 'main'
   if (!isValidSlug(slug)) {
     return NextResponse.json({ error: 'Invalid slug.' }, { status: 400 })
   }

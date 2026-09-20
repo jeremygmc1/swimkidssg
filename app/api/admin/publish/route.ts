@@ -55,7 +55,7 @@ export async function POST(request: Request) {
     body: payload.body ?? '',
   }
   const originalSlug = payload.originalSlug?.trim() || undefined
-  const branch = payload.branch?.trim() || 'main'
+  const branch = payload.branch?.trim() || process.env.POSTS_TARGET_BRANCH || 'main'
 
   // Offline validation first, so field/body errors surface instantly and don't
   // depend on GitHub being reachable. Uniqueness (which needs the live list) is
