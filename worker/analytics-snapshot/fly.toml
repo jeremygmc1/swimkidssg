@@ -1,0 +1,28 @@
+# Fly.io config for the analytics-snapshot worker.
+# Rename the app or region as you like, then: fly launch --no-deploy && fly deploy
+app = "swimkidssg-analytics-snapshot"
+primary_region = "sin"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # Keep at least one machine running so the browser stays warm and /analytics is
+  # snappy. Set to true only if you accept a cold start on the first request.
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    method = "GET"
+    path = "/healthz"
+    interval = "30s"
+    timeout = "5s"
+
+[[vm]]
+  # Chromium needs headroom; 512MB is the practical floor, 1GB is comfortable.
+  memory = "1gb"
+  cpu_kind = "shared"
+  cpus = 1
