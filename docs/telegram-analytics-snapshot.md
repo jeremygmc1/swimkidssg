@@ -16,7 +16,7 @@ Telegram ──POST──▶ app/api/telegram (Vercel function)
                      • acks "Generating…", triggers worker, returns fast
                                    │
                                    ▼
-                     worker/analytics-snapshot (always-on, e.g. Fly.io)
+                     worker/analytics-snapshot (always-on, e.g. Northflank)
                      • warm headless Chromium + stored Vercel session
                      • screenshots VERCEL_ANALYTICS_URL
                      • sendPhoto ──▶ Telegram ──▶ You
@@ -38,12 +38,57 @@ functions cap at ~10s and cold-start Chromium — too tight to be reliable.
 
 ### 1. Deploy the worker
 
+The worker is a plain Docker service (`worker/analytics-snapshot/Dockerfile`) and
+runs on any always-on container host. Capture a Vercel session first (step 2) so
+`VERCEL_STORAGE_STATE_B64` is ready before you set secrets.
+
+Whatever host you use, it needs:
+
+- **Build**: the Dockerfile at `worker/analytics-snapshot/Dockerfile`, with the
+  build context set to `worker/analytics-snapshot` (the Dockerfile `COPY`s are
+  relative to that folder, not the repo root).
+- **Port**: `8080`, exposed over public HTTPS.
+- **Resources**: **≥1 GB RAM** and ≥0.5 vCPU — Chromium needs the headroom.
+- **Always-on**: keep ≥1 instance running (disable scale-to-zero) so the browser
+  stays warm and `/analytics` is snappy.
+- **Health check**: HTTP `GET /healthz` → 200.
+- **Env / secrets**: `SNAPSHOT_WORKER_SECRET`, `TELEGRAM_BOT_TOKEN`,
+  `VERCEL_ANALYTICS_URL`, `VERCEL_STORAGE_STATE_B64` (see `.env.example`).
+
+#### Northflank (recommended)
+
+Via the dashboard:
+
+1. **Create a project** (pick a region near you / your Vercel edge).
+2. **Add a service → Combined service** (build + deploy from Git). Connect the
+   GitHub repo and choose the `main` branch (after PR #23 is merged).
+3. **Build**: select **Dockerfile** as the build type and set:
+   - Dockerfile path: `worker/analytics-snapshot/Dockerfile`
+   - Build context / build root: `worker/analytics-snapshot`
+4. **Networking**: add port `8080` (HTTP) and enable **Public** — Northflank
+   gives you a URL like `https://<service>--<project>.code.run`.
+5. **Resources**: choose a plan with **≥1 GB RAM** (e.g. `nf-compute-50` or
+   larger). The smallest plans will OOM Chromium.
+6. **Runtime**: 1 instance, scale-to-zero **off**.
+7. **Health check**: HTTP, path `/healthz`, port `8080`.
+8. **Environment**: add the four variables above (use a **Secret group** so the
+   session/secret values aren't shown in plaintext logs).
+9. **Deploy**, then open `https://<public-url>/healthz` → expect `{"ok":true}`.
+
+CLI alternative (`npm i -g @northflank/cli`, then `northflank login`): you can
+script the same via `northflank create service` with a `--dockerfile` build, but
+the dashboard is faster for a one-off.
+
+Your worker base URL is the public URL; the Vercel side points at it **with the
+`/snapshot` path** (step 3).
+
+#### Fly.io (alternative)
+
+A `fly.toml` is included:
+
 ```bash
 cd worker/analytics-snapshot
-npm install
-# On the machine you'll log in from, get a session first (step 2) so you have
-# VERCEL_STORAGE_STATE_B64 ready, then deploy.
-fly launch --no-deploy          # or Railway / Render / any container host
+fly launch --no-deploy
 fly secrets set \
   SNAPSHOT_WORKER_SECRET="<random-long-string>" \
   TELEGRAM_BOT_TOKEN="<same token the site uses>" \
@@ -52,8 +97,10 @@ fly secrets set \
 fly deploy
 ```
 
-Note the worker URL, e.g. `https://swimkidssg-analytics-snapshot.fly.dev`.
-Check `GET /healthz` returns `{"ok":true}`.
+Worker URL is then `https://<app-name>.fly.dev`. `fly.toml` is Fly-only — other
+hosts ignore it and read the Dockerfile directly.
+
+Either way, confirm `GET /healthz` on the public URL returns `{"ok":true}`.
 
 ### 2. Capture a Vercel session
 
@@ -88,25 +135,55 @@ Set these env vars on the Vercel project (Production + Preview) and redeploy:
 command. `UPSTASH_REDIS_REST_URL` / `_TOKEN` must be set for the 1/min limit to
 apply (without them it fails open / unthrottled).
 
-### 4. Register the Telegram webhook
+### 4. Register the Telegram webhook (production)
 
-Point the bot at the site and bind the secret (one-time curl):
+A bot has **one** webhook. Registering points it at your production site; the
+outbound lead-alert flow is unaffected (that doesn't use a webhook).
+
+Generate a strong secret and use the **same value** here and in Vercel's
+`TELEGRAM_WEBHOOK_SECRET` (step 3):
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+Register the webhook against your **canonical production domain** (custom domain
+if you have one, else the production `*.vercel.app` URL — not a preview URL):
 
 ```bash
 curl -X POST "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook" \
   -H "Content-Type: application/json" \
   -d '{
-    "url": "https://<your-site-domain>/api/telegram",
+    "url": "https://<your-production-domain>/api/telegram",
     "secret_token": "<same as TELEGRAM_WEBHOOK_SECRET>",
     "allowed_updates": ["message"]
   }'
 ```
 
-Verify with `getWebhookInfo`:
+Expect `{"ok":true,"result":true,"description":"Webhook was set"}`.
+
+Verify:
 
 ```bash
 curl "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/getWebhookInfo"
 ```
+
+- `url` should be your production URL.
+- `pending_update_count` should be low / 0.
+- `last_error_message` should be absent. If present it names the problem —
+  usually **401** (secret mismatch between Vercel and `setWebhook`) or **404**
+  (wrong URL, or the route isn't deployed yet).
+
+Rollback / remove the webhook:
+
+```bash
+curl "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/deleteWebhook"
+```
+
+> `secret_token` must be 1–256 chars from `A–Z a–z 0–9 _ -` (a hex string
+> qualifies). To test on a preview URL without disturbing production, use a
+> throwaway bot token from `@BotFather` — one webhook per bot means a preview
+> `setWebhook` would otherwise repoint your real bot.
 
 ### 5. Test
 
