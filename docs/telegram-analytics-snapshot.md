@@ -16,7 +16,7 @@ Telegram ──POST──▶ app/api/telegram (Vercel function)
                      • acks "Generating…", triggers worker, returns fast
                                    │
                                    ▼
-                     worker/analytics-snapshot (always-on, e.g. Northflank)
+                     worker/analytics-snapshot (always-on, e.g. Fly.io)
                      • warm headless Chromium + stored Vercel session
                      • screenshots VERCEL_ANALYTICS_URL
                      • sendPhoto ──▶ Telegram ──▶ You
@@ -39,52 +39,13 @@ functions cap at ~10s and cold-start Chromium — too tight to be reliable.
 ### 1. Deploy the worker
 
 The worker is a plain Docker service (`worker/analytics-snapshot/Dockerfile`) and
-runs on any always-on container host. Capture a Vercel session first (step 2) so
-`VERCEL_STORAGE_STATE_B64` is ready before you set secrets.
+runs on any always-on container host — Fly.io, Render, Railway, or a small VPS.
+It just needs a persistent process (so the browser stays warm), public HTTPS,
+port `8080`, and **≥1 GB RAM** for Chromium. A `fly.toml` is included; steps
+below use Fly.
 
-Whatever host you use, it needs:
-
-- **Build**: the Dockerfile at `worker/analytics-snapshot/Dockerfile`, with the
-  build context set to `worker/analytics-snapshot` (the Dockerfile `COPY`s are
-  relative to that folder, not the repo root).
-- **Port**: `8080`, exposed over public HTTPS.
-- **Resources**: **≥1 GB RAM** and ≥0.5 vCPU — Chromium needs the headroom.
-- **Always-on**: keep ≥1 instance running (disable scale-to-zero) so the browser
-  stays warm and `/analytics` is snappy.
-- **Health check**: HTTP `GET /healthz` → 200.
-- **Env / secrets**: `SNAPSHOT_WORKER_SECRET`, `TELEGRAM_BOT_TOKEN`,
-  `VERCEL_ANALYTICS_URL`, `VERCEL_STORAGE_STATE_B64` (see `.env.example`).
-
-#### Northflank (recommended)
-
-Via the dashboard:
-
-1. **Create a project** (pick a region near you / your Vercel edge).
-2. **Add a service → Combined service** (build + deploy from Git). Connect the
-   GitHub repo and choose the `main` branch (after PR #23 is merged).
-3. **Build**: select **Dockerfile** as the build type and set:
-   - Dockerfile path: `worker/analytics-snapshot/Dockerfile`
-   - Build context / build root: `worker/analytics-snapshot`
-4. **Networking**: add port `8080` (HTTP) and enable **Public** — Northflank
-   gives you a URL like `https://<service>--<project>.code.run`.
-5. **Resources**: choose a plan with **≥1 GB RAM** (e.g. `nf-compute-50` or
-   larger). The smallest plans will OOM Chromium.
-6. **Runtime**: 1 instance, scale-to-zero **off**.
-7. **Health check**: HTTP, path `/healthz`, port `8080`.
-8. **Environment**: add the four variables above (use a **Secret group** so the
-   session/secret values aren't shown in plaintext logs).
-9. **Deploy**, then open `https://<public-url>/healthz` → expect `{"ok":true}`.
-
-CLI alternative (`npm i -g @northflank/cli`, then `northflank login`): you can
-script the same via `northflank create service` with a `--dockerfile` build, but
-the dashboard is faster for a one-off.
-
-Your worker base URL is the public URL; the Vercel side points at it **with the
-`/snapshot` path** (step 3).
-
-#### Fly.io (alternative)
-
-A `fly.toml` is included:
+Capture a Vercel session first (step 2) so `VERCEL_STORAGE_STATE_B64` is ready
+before you set secrets.
 
 ```bash
 cd worker/analytics-snapshot
@@ -97,10 +58,13 @@ fly secrets set \
 fly deploy
 ```
 
-Worker URL is then `https://<app-name>.fly.dev`. `fly.toml` is Fly-only — other
-hosts ignore it and read the Dockerfile directly.
+Note the worker URL, e.g. `https://swimkidssg-analytics-snapshot.fly.dev`.
+Check `GET /healthz` returns `{"ok":true}`.
 
-Either way, confirm `GET /healthz` on the public URL returns `{"ok":true}`.
+On another host, point it at `worker/analytics-snapshot/Dockerfile` with the
+build context set to that same folder, set the four env vars above, keep one
+instance always running, and use `/healthz` as the health check. `fly.toml` is
+Fly-only — other hosts ignore it and read the Dockerfile directly.
 
 ### 2. Capture a Vercel session
 
