@@ -39,6 +39,13 @@ function sniffImage(buf: Buffer): 'png' | 'jpg' | 'webp' | null {
   return null
 }
 
+// Replace an image URL in text, anchored so a longer path sharing the same
+// prefix isn't corrupted (e.g. .../x.png must not match inside .../x.png-2.png).
+function replaceUrl(text: string, oldUrl: string, newUrl: string): string {
+  const escaped = oldUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return text.replace(new RegExp(`${escaped}(?![A-Za-z0-9._-])`, 'g'), newUrl)
+}
+
 type StagedImage = { path: string; base64: string }
 
 type PublishBody = {
@@ -138,7 +145,7 @@ export async function POST(request: Request) {
     const oldUrl = img.path.replace(/^public\//, '/') // e.g. /blog/<old-slug>/<file>
     const newUrl = `/blog/${input.slug}/${filename}`
     if (oldUrl !== newUrl) {
-      body = body.split(oldUrl).join(newUrl)
+      body = replaceUrl(body, oldUrl, newUrl)
       if (coverImage === oldUrl) coverImage = newUrl
     }
     imageFiles.push({ path: `public/blog/${input.slug}/${filename}`, content: img.base64, encoding: 'base64' })
@@ -161,8 +168,15 @@ export async function POST(request: Request) {
   }
 
   // Lost-update guard: if the post changed since the editor loaded it, don't
-  // silently overwrite someone else's edit.
-  if (originalSlug && payload.baseSha) {
+  // silently overwrite someone else's edit. baseSha is required for an edit so
+  // the check can't be bypassed by omitting it.
+  if (originalSlug) {
+    if (!payload.baseSha) {
+      return NextResponse.json(
+        { error: 'Your editor is out of date. Reload the post and try again.' },
+        { status: 409 }
+      )
+    }
     let currentSha: string | null
     try {
       currentSha = await getFileSha(`content/posts/${originalSlug}.mdx`)
@@ -196,11 +210,13 @@ export async function POST(request: Request) {
     blobRefs = []
     for (const f of oldImages) {
       const filename = f.path.split('/').pop() ?? ''
-      if (stagedNames.has(filename)) continue // a fresh upload replaces this one
+      // Rewrite the reference to the new slug for every existing image — even one
+      // a fresh upload replaces, since the old folder is deleted below.
       const oldUrl = `/blog/${originalSlug}/${filename}`
       const newUrl = `/blog/${input.slug}/${filename}`
-      body = body.split(oldUrl).join(newUrl)
+      body = replaceUrl(body, oldUrl, newUrl)
       if (coverImage === oldUrl) coverImage = newUrl
+      if (stagedNames.has(filename)) continue // a fresh upload already provides this file
       blobRefs.push({ path: `public/blog/${input.slug}/${filename}`, sha: f.sha })
     }
     deletions = [`content/posts/${originalSlug}.mdx`, ...oldImages.map((f) => f.path)]

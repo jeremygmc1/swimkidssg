@@ -107,7 +107,8 @@ export async function listPosts(): Promise<PostSummary[]> {
 }
 
 // Load one post (frontmatter + body + blob SHA) for the edit screen. The SHA is
-// only informational here — commitFiles derives its own from the branch tree.
+// used as the lost-update precondition: the editor sends it back as baseSha and
+// the publish route rejects (409) if the file has changed since.
 export async function getPostRaw(slug: string): Promise<RawPost> {
   const path = `${POSTS_DIR}/${slug}.mdx`
   const meta = await ghJson<{ sha: string; content: string; encoding: string }>(
