@@ -125,15 +125,23 @@ The deploy prints a Service URL like
 guarded by `SNAPSHOT_WORKER_SECRET` at the app layer, and Vercel calls it with
 that secret.
 
-> **Cloud Run CPU caveat — do not skip.** This worker returns `202` immediately
-> and then does the screenshot *after* the response. Cloud Run's default gives an
-> instance CPU only while a request is in flight, so that background work would be
-> frozen and the photo would never send. `--no-cpu-throttling` (CPU always
-> allocated) fixes it. Combined with `--min-instances 1` this is effectively
-> always-on (~$10–15/mo) — at which point Fly.io is cheaper for the same warmth.
-> True scale-to-zero (`--min-instances 0`) is unreliable here: the instance can
-> be reclaimed before the post-`202` screenshot finishes. Only use `0` if you
-> first change the worker to finish the screenshot *before* responding.
+> **Cloud Run CPU caveat — do not skip.** In its default **async** mode the
+> worker returns `202` and screenshots *after* the response. Cloud Run gives an
+> instance CPU only while a request is in flight, so that background work is
+> frozen and the photo never sends. Two ways to run it here:
+>
+> - **Always-warm** (shown above): `--min-instances 1 --no-cpu-throttling`, async
+>   mode. Reliable, but ~$10–15/mo — at which point **Fly.io is cheaper for the
+>   same warmth**, which is why Fly is the default (Option A).
+> - **Scale-to-zero** (near-$0): set `--set-env-vars SYNC_MODE=1`,
+>   `--min-instances 0`, and drop `--no-cpu-throttling`. In sync mode the worker
+>   holds the request open until the photo is delivered, so CPU stays allocated.
+>   **But the caller must wait the full ~15–30s** — the Vercel `/api/telegram`
+>   route aborts its trigger at 8s (and Vercel Hobby caps function time), so it
+>   cannot be the caller for sync mode. Use scale-to-zero only if you trigger the
+>   worker from something that holds the connection (e.g. `curl`, or a caller on a
+>   plan with a long timeout). For the Vercel-driven `/analytics` flow, use
+>   always-warm or Fly.
 
 #### Any other host
 
@@ -244,3 +252,9 @@ Send `/analytics` to the bot. You should get "Generating…" then the screenshot
   `TELEGRAM_WEBHOOK_SECRET` secret. Rotate by re-capturing / regenerating.
 - The bot token is shared with the existing lead-alert flow; no second bot
   needed.
+- **`SYNC_MODE`** (worker env var) switches the response model. Default (unset)
+  is async — respond `202`, screenshot in the background — which is what the
+  Vercel `/analytics` flow and Fly.io expect. Set it truthy only for Cloud Run
+  scale-to-zero (see the Cloud Run caveat) or when testing the worker directly:
+  in sync mode `curl .../snapshot` blocks until delivery and returns `200`/`500`,
+  so the HTTP response tells you whether it worked.

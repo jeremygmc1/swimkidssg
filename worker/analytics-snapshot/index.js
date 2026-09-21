@@ -22,6 +22,14 @@ const ANALYTICS_URL = process.env.VERCEL_ANALYTICS_URL
 // is installed at build time; leave unset to use playwright-core's default.
 const EXECUTABLE_PATH = process.env.CHROMIUM_EXECUTABLE_PATH || undefined
 const NAV_TIMEOUT = Number(process.env.NAV_TIMEOUT_MS) || 45000
+// Response mode for POST /snapshot:
+//   async (default) — respond 202 immediately, screenshot in the background.
+//     Right for Fly.io and any always-on host where the process stays alive.
+//   sync (SYNC_MODE truthy) — do the screenshot while the request is open and
+//     respond only once it's delivered. Needed on hosts that allocate CPU only
+//     during a request (e.g. Cloud Run scale-to-zero), and handy for local
+//     testing since the HTTP response then reflects the outcome.
+const SYNC_MODE = /^(1|true|yes|on|sync)$/i.test(process.env.SYNC_MODE || '')
 
 // Playwright storageState (cookies + localStorage) captured by capture-session.js,
 // supplied as base64-encoded JSON so it fits in a single env var / secret.
@@ -128,11 +136,15 @@ async function looksLikeLogin(page) {
   return Boolean(passwordField)
 }
 
+// Screenshot the dashboard and deliver it to Telegram. Resolves true on a
+// delivered photo, false on any handled failure (expired session, missing
+// config, capture error) — the failure is also reported to the chat. Never
+// rejects, so callers can await it without a try/catch.
 async function captureAndSend(chatId) {
   const storageState = loadStorageState()
   if (!storageState) {
     await telegramSendMessage(chatId, '⚠️ No stored Vercel session on the worker. Run capture-session to set one.')
-    return
+    return false
   }
 
   const browser = await getBrowser()
@@ -150,7 +162,7 @@ async function captureAndSend(chatId) {
         chatId,
         '🔒 Vercel session expired. Re-run capture-session to refresh VERCEL_STORAGE_STATE_B64, then redeploy the worker.',
       )
-      return
+      return false
     }
 
     // Give charts a beat to finish drawing after network goes idle.
@@ -159,9 +171,11 @@ async function captureAndSend(chatId) {
     const png = await page.screenshot({ type: 'png', fullPage: true })
     const stamp = new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC'
     await deliverImage(chatId, png, `Vercel Analytics — ${stamp}`)
+    return true
   } catch (err) {
     console.error('captureAndSend error:', err)
     await telegramSendMessage(chatId, '⚠️ Failed to capture the analytics snapshot. Check the worker logs.')
+    return false
   } finally {
     await context.close().catch(() => {})
   }
@@ -177,7 +191,7 @@ app.get('/healthz', (_req, res) => {
   res.status(missing.length ? 503 : 200).json({ ok: missing.length === 0, missing })
 })
 
-app.post('/snapshot', (req, res) => {
+app.post('/snapshot', async (req, res) => {
   if (!secretMatches(req.body?.secret)) {
     return res.status(401).json({ ok: false, error: 'unauthorized' })
   }
@@ -190,14 +204,22 @@ app.post('/snapshot', (req, res) => {
     return res.status(503).json({ ok: false, error: 'worker not configured', missing })
   }
 
-  // Ack immediately; the browser work + delivery happen after the response so the
-  // caller (a Vercel function on a tight budget) never waits on the screenshot.
+  if (SYNC_MODE) {
+    // Keep the request open until the photo is delivered. Required where CPU is
+    // only allocated during a request (Cloud Run scale-to-zero); the caller must
+    // be willing to wait the full ~15–30s. Response reflects the outcome.
+    const ok = await captureAndSend(String(chatId))
+    return res.status(ok ? 200 : 500).json({ ok })
+  }
+
+  // Async (default): ack immediately; the browser work + delivery happen after
+  // the response so the caller (a Vercel function on a tight budget) never waits.
   res.status(202).json({ ok: true })
   captureAndSend(String(chatId)).catch((err) => console.error('captureAndSend rejected:', err))
 })
 
 app.listen(PORT, () => {
   const missing = requiredEnvMissing()
-  console.log(`analytics-snapshot worker listening on :${PORT}`)
+  console.log(`analytics-snapshot worker listening on :${PORT} (mode: ${SYNC_MODE ? 'sync' : 'async'})`)
   if (missing.length) console.warn('Missing required env:', missing.join(', '))
 })
