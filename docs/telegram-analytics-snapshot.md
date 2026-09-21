@@ -39,13 +39,24 @@ functions cap at ~10s and cold-start Chromium — too tight to be reliable.
 ### 1. Deploy the worker
 
 The worker is a plain Docker service (`worker/analytics-snapshot/Dockerfile`) and
-runs on any always-on container host — Fly.io, Render, Railway, or a small VPS.
-It just needs a persistent process (so the browser stays warm), public HTTPS,
-port `8080`, and **≥1 GB RAM** for Chromium. A `fly.toml` is included; steps
-below use Fly.
+runs on any container host — Fly.io, Google Cloud Run, Render, Railway, or a
+small VPS. It needs public HTTPS, port `8080`, and **≥1 GB RAM** for Chromium.
 
 Capture a Vercel session first (step 2) so `VERCEL_STORAGE_STATE_B64` is ready
 before you set secrets.
+
+The four env vars every host needs:
+
+| Var | Value |
+|-----|-------|
+| `SNAPSHOT_WORKER_SECRET` | random long string; must match Vercel's copy (step 3) |
+| `TELEGRAM_BOT_TOKEN` | same token the site uses |
+| `VERCEL_ANALYTICS_URL` | `https://vercel.com/<team>/<project>/analytics` |
+| `VERCEL_STORAGE_STATE_B64` | from step 2 |
+
+#### Option A — Fly.io (always-on)
+
+Keeps the browser warm; `/analytics` returns in ~5–8s. A `fly.toml` is included.
 
 ```bash
 cd worker/analytics-snapshot
@@ -58,13 +69,80 @@ fly secrets set \
 fly deploy
 ```
 
-Note the worker URL, e.g. `https://swimkidssg-analytics-snapshot.fly.dev`.
-Check `GET /healthz` returns `{"ok":true}`.
+Worker URL is e.g. `https://swimkidssg-analytics-snapshot.fly.dev`.
 
-On another host, point it at `worker/analytics-snapshot/Dockerfile` with the
-build context set to that same folder, set the four env vars above, keep one
-instance always running, and use `/healthz` as the health check. `fly.toml` is
-Fly-only — other hosts ignore it and read the Dockerfile directly.
+#### Option B — Google Cloud Run
+
+Cheapest at low volume, but read the CPU caveat below — it dictates the
+`--min-instances` / `--no-cpu-throttling` choice.
+
+Prereqs: the `gcloud` CLI, a GCP project with billing, and the APIs enabled:
+
+```bash
+gcloud services enable run.googleapis.com cloudbuild.googleapis.com secretmanager.googleapis.com
+```
+
+Store the two real secrets in Secret Manager (keeps them out of shell history and
+the service config; the other two vars are not sensitive):
+
+```bash
+printf '%s' '<random-long-string>'  | gcloud secrets create snapshot-worker-secret --data-file=-
+printf '%s' '<bot token>'           | gcloud secrets create telegram-bot-token   --data-file=-
+printf '%s' '<base64 from step 2>'  | gcloud secrets create vercel-storage-state  --data-file=-
+```
+
+Deploy (builds from the Dockerfile via Cloud Build — run from the worker dir):
+
+```bash
+cd worker/analytics-snapshot
+gcloud run deploy swimkidssg-analytics-snapshot \
+  --source . \
+  --region asia-southeast1 \
+  --port 8080 --memory 1Gi --cpu 1 \
+  --min-instances 1 --max-instances 1 \
+  --no-cpu-throttling \
+  --allow-unauthenticated \
+  --set-env-vars VERCEL_ANALYTICS_URL="https://vercel.com/<team>/<project>/analytics" \
+  --set-secrets SNAPSHOT_WORKER_SECRET=snapshot-worker-secret:latest,TELEGRAM_BOT_TOKEN=telegram-bot-token:latest,VERCEL_STORAGE_STATE_B64=vercel-storage-state:latest
+```
+
+If deploy fails on secret access, grant the runtime service account the accessor
+role (it usually offers to do this for you):
+
+```bash
+PN=$(gcloud projects describe "$(gcloud config get-value project)" --format='value(projectNumber)')
+for s in snapshot-worker-secret telegram-bot-token vercel-storage-state; do
+  gcloud secrets add-iam-policy-binding "$s" \
+    --member="serviceAccount:${PN}-compute@developer.gserviceaccount.com" \
+    --role="roles/secretmanager.secretAccessor"
+done
+```
+
+The deploy prints a Service URL like
+`https://swimkidssg-analytics-snapshot-xxxx.a.run.app`.
+
+`--allow-unauthenticated` exposes the URL publicly, which is fine: `/snapshot` is
+guarded by `SNAPSHOT_WORKER_SECRET` at the app layer, and Vercel calls it with
+that secret.
+
+> **Cloud Run CPU caveat — do not skip.** This worker returns `202` immediately
+> and then does the screenshot *after* the response. Cloud Run's default gives an
+> instance CPU only while a request is in flight, so that background work would be
+> frozen and the photo would never send. `--no-cpu-throttling` (CPU always
+> allocated) fixes it. Combined with `--min-instances 1` this is effectively
+> always-on (~$10–15/mo) — at which point Fly.io is cheaper for the same warmth.
+> True scale-to-zero (`--min-instances 0`) is unreliable here: the instance can
+> be reclaimed before the post-`202` screenshot finishes. Only use `0` if you
+> first change the worker to finish the screenshot *before* responding.
+
+#### Any other host
+
+Point it at `worker/analytics-snapshot/Dockerfile` with the build context set to
+that folder, set the four env vars, keep one instance running, and use `/healthz`
+as the health check. `fly.toml` is Fly-only; other hosts read the Dockerfile.
+
+After deploying, confirm `GET /healthz` on the public URL returns `{"ok":true}`.
+Your `SNAPSHOT_WORKER_URL` for step 3 is that URL **plus `/snapshot`**.
 
 ### 2. Capture a Vercel session
 
