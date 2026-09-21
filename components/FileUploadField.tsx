@@ -94,7 +94,7 @@ export default function FileUploadField({ field, value, onChange }: Props) {
           className="block w-full text-sm text-gray-600 file:mr-3 file:rounded-full file:border-0 file:bg-brand-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-brand-700 hover:file:bg-brand-100 disabled:opacity-50"
         />
       )}
-      {uploading && <p className="text-xs text-gray-400">Uploading…</p>}
+      {uploading && <p className="text-xs text-gray-500">Uploading…</p>}
       {error && <p className="text-xs text-red-600">{error}</p>}
     </div>
   )
