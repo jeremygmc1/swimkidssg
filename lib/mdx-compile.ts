@@ -40,6 +40,12 @@ function escapeInlineAware(line: string): string {
         i = close + ticks.length
         continue
       }
+      // Unmatched backtick run (no closing span): emit it verbatim and advance
+      // past it. Backticks aren't MDX-significant, and this guarantees progress —
+      // otherwise indexOf('`', i) below would return i and loop forever.
+      out += ticks
+      i = j
+      continue
     }
     let next = line.indexOf('`', i)
     if (next === -1) next = line.length
