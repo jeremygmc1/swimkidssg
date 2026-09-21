@@ -9,15 +9,21 @@
 # fire after this file is merged to `main`. It will not run as a check on the PR
 # that adds it — expect the first real run on the next preview deploy post-merge.
 #
-# Report-only for now (`fail_action: false`): the scan surfaces findings without
-# blocking. Promote to a gate later by flipping fail_action to true.
+# Report-only for now: the ZAP step runs with `continue-on-error`, so findings
+# (and ZAP's exit code) never fail the job. Promote to a gate later by removing
+# continue-on-error and dropping the `-I` flag so ZAP fails on findings.
+#
+# We invoke ZAP via its Docker image directly rather than the zaproxy/action-
+# baseline action: that action still uploads its report through GitHub's retired
+# artifact-v3 API, which now returns HTTP 400 and fails the job even on a clean
+# scan. Running the container ourselves + actions/upload-artifact@v4 avoids that.
 name: DAST
 
 on:
   deployment_status:
 
-# Least privilege: just read the repo. (Issue writing is disabled below, so no
-# issues: write scope is needed.)
+# Least privilege: just read the repo. Findings go to the uploaded report
+# artifact and the job log, so no issues:/security-events: write is needed.
 permissions:
   contents: read
 
@@ -31,19 +37,37 @@ jobs:
       github.event.deployment_status.state == 'success' &&
       github.event.deployment_status.environment_url != '' &&
       !contains(github.event.deployment_status.environment, 'Production')
+    env:
+      # Passed via env (not inlined into the run script) so the URL can't be
+      # interpreted as shell.
+      TARGET_URL: ${{ github.event.deployment_status.environment_url }}
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
+      # World-writable so the ZAP container's non-root `zap` user can write the
+      # reports into the mounted workspace.
+      - name: Prepare report directory
+        run: mkdir -p zap-out && chmod 777 zap-out
+
       - name: ZAP Baseline scan
-        uses: zaproxy/action-baseline@a418de766254e096fa7d9e30f8dc9662b58df224 # v0.9.0
+        continue-on-error: true # report-only: never fail the job during rollout
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/zap/wrk/:rw" \
+            ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py \
+              -t "$TARGET_URL" \
+              -c .zap/rules.tsv \
+              -r zap-out/report.html \
+              -w zap-out/report.md \
+              -J zap-out/report.json \
+              -I
+
+      - name: Upload ZAP report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          target: ${{ github.event.deployment_status.environment_url }}
-          # Alert tuning lives here — map noisy rules to IGNORE as they're triaged.
-          rules_file_name: .zap/rules.tsv
-          # Report-only during rollout: a finding must not fail the workflow yet.
-          fail_action: false
-          # Don't auto-open GitHub issues; the HTML/MD report artifact and the
-          # Actions job summary carry the findings. Flip to true for a tracking
-          # issue (also add `issues: write` to permissions above if you do).
-          allow_issue_writing: false
+          name: zap-baseline-report
+          path: zap-out/
+          if-no-files-found: warn
