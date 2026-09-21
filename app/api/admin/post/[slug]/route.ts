@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { guardAdmin } from '@/lib/admin-auth'
 import { getPostRaw } from '@/lib/github'
 import { isValidSlug } from '@/lib/post-validation'
+import { containsJsx } from '@/lib/mdx-compile'
 
 // Loads one post (frontmatter + body) for the editor. `hasJsx` flags posts that
 // use developer-only MDX (e.g. <Carousel>) so the editor can block editing them
@@ -30,7 +31,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
       coverImage: str(post.data.coverImage),
       lastEdited: str(post.data.lastEdited),
       body: post.content,
-      hasJsx: /<[A-Za-z]/.test(post.content),
+      hasJsx: containsJsx(post.content),
     })
   } catch (err) {
     console.error('admin/post error:', err)

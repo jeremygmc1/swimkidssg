@@ -24,10 +24,12 @@ function escapeProse(text: string): string {
   return text.replace(/(?<!\\)[{}<]/g, (c) => `\\${c}`)
 }
 
-// Escape a single line while leaving inline code spans (`like this`) untouched —
-// inside code these characters are already literal to MDX.
-function escapeInlineAware(line: string): string {
-  let out = ''
+// Split a line into code / prose segments, preserving inline code spans
+// (`like this`) verbatim. Guarantees forward progress even on an unmatched
+// backtick run (which is emitted verbatim as a prose segment) — a lone backtick
+// once looped here forever.
+function splitLineByCode(line: string): { text: string; code: boolean }[] {
+  const segments: { text: string; code: boolean }[] = []
   let i = 0
   while (i < line.length) {
     if (line[i] === '`') {
@@ -36,50 +38,76 @@ function escapeInlineAware(line: string): string {
       const ticks = line.slice(i, j)
       const close = line.indexOf(ticks, j)
       if (close !== -1) {
-        out += line.slice(i, close + ticks.length) // code span, verbatim
+        segments.push({ text: line.slice(i, close + ticks.length), code: true })
         i = close + ticks.length
         continue
       }
-      // Unmatched backtick run (no closing span): emit it verbatim and advance
-      // past it. Backticks aren't MDX-significant, and this guarantees progress —
-      // otherwise indexOf('`', i) below would return i and loop forever.
-      out += ticks
+      // Unmatched backtick run: not a code span. Emit verbatim (backticks aren't
+      // MDX-significant) and advance past it.
+      segments.push({ text: ticks, code: false })
       i = j
       continue
     }
     let next = line.indexOf('`', i)
     if (next === -1) next = line.length
-    out += escapeProse(line.slice(i, next))
+    segments.push({ text: line.slice(i, next), code: false })
     i = next
   }
-  return out
+  return segments
+}
+
+// Classify each body line as prose (outside any fenced code block, and not a
+// fence delimiter itself) or not. Shared by neutralizeMdx and containsJsx so the
+// fence tracking lives in one place.
+function classifyLines(body: string): { line: string; prose: boolean }[] {
+  let fenceChar: string | null = null
+  let fenceLen = 0
+  return body.split('\n').map((line) => {
+    const m = line.match(/^\s*(`{3,}|~{3,})(.*)$/)
+    if (m) {
+      const marker = m[1]
+      if (fenceChar === null) {
+        fenceChar = marker[0]
+        fenceLen = marker.length
+      } else if (marker[0] === fenceChar && marker.length >= fenceLen && m[2].trim() === '') {
+        fenceChar = null
+        fenceLen = 0
+      }
+      return { line, prose: false }
+    }
+    return { line, prose: fenceChar === null }
+  })
 }
 
 // Escape MDX-significant characters throughout a Markdown body, skipping fenced
 // code blocks (``` / ~~~) and inline code, where the characters are literal.
 export function neutralizeMdx(body: string): string {
-  let fenceChar: string | null = null
-  let fenceLen = 0
-
-  return body
-    .split('\n')
-    .map((line) => {
-      const m = line.match(/^\s*(`{3,}|~{3,})(.*)$/)
-      if (m) {
-        const marker = m[1]
-        if (fenceChar === null) {
-          fenceChar = marker[0]
-          fenceLen = marker.length
-        } else if (marker[0] === fenceChar && marker.length >= fenceLen && m[2].trim() === '') {
-          fenceChar = null
-          fenceLen = 0
-        }
-        return line
-      }
-      if (fenceChar !== null) return line
-      return escapeInlineAware(line)
-    })
+  return classifyLines(body)
+    .map(({ line, prose }) =>
+      prose
+        ? splitLineByCode(line)
+            .map((seg) => (seg.code ? seg.text : escapeProse(seg.text)))
+            .join('')
+        : line
+    )
     .join('\n')
+}
+
+// True when the body contains a JSX/HTML tag the Markdown editor can't
+// round-trip (e.g. <Carousel>, <img ... />) — used to keep legacy component
+// posts developer-only. Ignores backslash-escaped `\<` (what neutralizeMdx
+// emits for literal `<` in prose) and anything inside code, so a normal
+// text post that merely mentions `<` or shows `<html>` in inline code is NOT
+// flagged and stays editable.
+export function containsJsx(body: string): boolean {
+  for (const { line, prose } of classifyLines(body)) {
+    if (!prose) continue
+    for (const seg of splitLineByCode(line)) {
+      if (seg.code) continue
+      if (/(?<!\\)<[A-Za-z/]/.test(seg.text)) return true
+    }
+  }
+  return false
 }
 
 export type MdxCheck = { ok: boolean; body: string; error?: string }
