@@ -39,6 +39,7 @@ function EditorScreen() {
         excerpt: data.excerpt,
         coverImage: data.coverImage,
         body: data.body,
+        baseSha: data.sha,
       })
       setScreen('edit')
     })()

@@ -1,6 +1,13 @@
 import { NextResponse } from 'next/server'
 import { guardAdmin } from '@/lib/admin-auth'
-import { commitFiles, listPosts, type CommitFile } from '@/lib/github'
+import {
+  commitFiles,
+  listPostSlugs,
+  listDirFiles,
+  getFileSha,
+  type CommitFile,
+  type BlobRef,
+} from '@/lib/github'
 import { validatePost, isValidSlug } from '@/lib/post-validation'
 import { validateMdxBody } from '@/lib/mdx-compile'
 import { buildPostFile } from '@/lib/frontmatter'
@@ -44,6 +51,7 @@ type PublishBody = {
   body?: string
   images?: StagedImage[]
   originalSlug?: string
+  baseSha?: string
   branch?: string
 }
 
@@ -98,40 +106,51 @@ export async function POST(request: Request) {
     )
   }
 
-  // Validate staged images defensively — the publish endpoint takes JSON
-  // directly, so re-check everything upload-image enforces rather than trusting
-  // the client: exact path shape (no traversal / subdirs), decoded size, and the
-  // real image type via magic bytes.
+  // Body/cover may get image URLs rewritten below (slug change / rename).
+  let body = mdx.body
+  let coverImage = input.coverImage
+
+  // Validate and re-home staged images. The publish endpoint takes JSON directly,
+  // so re-check everything upload-image enforces (decoded size, real type via
+  // magic bytes) and derive the repo path from the validated slug + basename —
+  // never trusting a client directory. Deriving the path also means an author who
+  // changed the slug after uploading gets the image filed under the new slug,
+  // with body/cover references rewritten to match, instead of a hard 400.
   const images = payload.images ?? []
-  const imagePrefix = `public/blog/${input.slug}/`
   const nameRe = /^[a-z0-9][a-z0-9._-]*\.(png|jpg|webp)$/
+  const imageFiles: CommitFile[] = []
   for (const img of images) {
     if (typeof img?.path !== 'string' || typeof img?.base64 !== 'string') {
       return NextResponse.json({ error: 'A staged image was malformed.' }, { status: 400 })
     }
-    if (img.path.includes('..') || !img.path.startsWith(imagePrefix)) {
-      return NextResponse.json({ error: 'A staged image had an unexpected path.' }, { status: 400 })
-    }
-    const name = img.path.slice(imagePrefix.length)
-    if (!nameRe.test(name)) {
+    const filename = img.path.split('/').pop() ?? ''
+    if (!nameRe.test(filename)) {
       return NextResponse.json({ error: 'A staged image had an unexpected filename.' }, { status: 400 })
     }
     const bytes = Buffer.from(img.base64, 'base64')
     if (bytes.length === 0 || bytes.length > MAX_IMAGE_BYTES) {
       return NextResponse.json({ error: 'A staged image was empty or too large (max 8 MB).' }, { status: 400 })
     }
-    const ext = name.slice(name.lastIndexOf('.') + 1)
+    const ext = filename.slice(filename.lastIndexOf('.') + 1)
     if (sniffImage(bytes) !== ext) {
       return NextResponse.json({ error: 'A staged image did not match its file type.' }, { status: 400 })
     }
+    const oldUrl = img.path.replace(/^public\//, '/') // e.g. /blog/<old-slug>/<file>
+    const newUrl = `/blog/${input.slug}/${filename}`
+    if (oldUrl !== newUrl) {
+      body = body.split(oldUrl).join(newUrl)
+      if (coverImage === oldUrl) coverImage = newUrl
+    }
+    imageFiles.push({ path: `public/blog/${input.slug}/${filename}`, content: img.base64, encoding: 'base64' })
   }
 
-  // Live slug list (source of truth) for the uniqueness check.
+  // Live slug list (source of truth) for the uniqueness check — directory
+  // listing only, no per-post body fetch/parse.
   let existingSlugs: string[]
   try {
-    existingSlugs = (await listPosts()).map((p) => p.slug)
+    existingSlugs = await listPostSlugs()
   } catch (err) {
-    console.error('admin/publish listPosts error:', err)
+    console.error('admin/publish listPostSlugs error:', err)
     return NextResponse.json({ error: 'Could not reach GitHub to validate the post.' }, { status: 502 })
   }
   if (input.slug !== originalSlug && existingSlugs.includes(input.slug)) {
@@ -141,27 +160,67 @@ export async function POST(request: Request) {
     )
   }
 
+  // Lost-update guard: if the post changed since the editor loaded it, don't
+  // silently overwrite someone else's edit.
+  if (originalSlug && payload.baseSha) {
+    let currentSha: string | null
+    try {
+      currentSha = await getFileSha(`content/posts/${originalSlug}.mdx`)
+    } catch (err) {
+      console.error('admin/publish getFileSha error:', err)
+      return NextResponse.json({ error: 'Could not reach GitHub to check the post.' }, { status: 502 })
+    }
+    if (currentSha !== payload.baseSha) {
+      return NextResponse.json(
+        { error: 'This post was changed since you opened it. Reload the editor and reapply your edit.' },
+        { status: 409 }
+      )
+    }
+  }
+
+  // On a rename, move existing images to the new slug folder (reusing their blob
+  // SHAs — no re-upload), rewrite their references, and delete the old post file
+  // and old image folder. Staged replacements (same filename) win over moves.
+  const renaming = Boolean(originalSlug && originalSlug !== input.slug && isValidSlug(originalSlug))
+  let blobRefs: BlobRef[] | undefined
+  let deletions: string[] | undefined
+  if (renaming && originalSlug) {
+    let oldImages: { path: string; sha: string }[]
+    try {
+      oldImages = await listDirFiles(`public/blog/${originalSlug}`)
+    } catch (err) {
+      console.error('admin/publish listDirFiles error:', err)
+      return NextResponse.json({ error: 'Could not reach GitHub to move images.' }, { status: 502 })
+    }
+    const stagedNames = new Set(imageFiles.map((f) => f.path.split('/').pop()))
+    blobRefs = []
+    for (const f of oldImages) {
+      const filename = f.path.split('/').pop() ?? ''
+      if (stagedNames.has(filename)) continue // a fresh upload replaces this one
+      const oldUrl = `/blog/${originalSlug}/${filename}`
+      const newUrl = `/blog/${input.slug}/${filename}`
+      body = body.split(oldUrl).join(newUrl)
+      if (coverImage === oldUrl) coverImage = newUrl
+      blobRefs.push({ path: `public/blog/${input.slug}/${filename}`, sha: f.sha })
+    }
+    deletions = [`content/posts/${originalSlug}.mdx`, ...oldImages.map((f) => f.path)]
+  }
+
   const fileText = buildPostFile(
     {
       title: input.title,
       date: input.date,
       excerpt: input.excerpt,
       author: input.author || undefined,
-      coverImage: input.coverImage || undefined,
+      coverImage: coverImage || undefined,
     },
-    mdx.body
+    body
   )
 
   const files: CommitFile[] = [
     { path: `content/posts/${input.slug}.mdx`, content: fileText, encoding: 'utf-8' },
-    ...images.map((img) => ({ path: img.path, content: img.base64, encoding: 'base64' as const })),
+    ...imageFiles,
   ]
-
-  // On a slug rename, remove the old post file in the same commit.
-  const deletions =
-    originalSlug && originalSlug !== input.slug && isValidSlug(originalSlug)
-      ? [`content/posts/${originalSlug}.mdx`]
-      : undefined
 
   const editing = Boolean(originalSlug)
   const verb = editing ? 'Update' : 'Publish'
@@ -169,7 +228,7 @@ export async function POST(request: Request) {
 
   let commit
   try {
-    commit = await commitFiles({ files, deletions, message, branch })
+    commit = await commitFiles({ files, blobRefs, deletions, message, branch })
   } catch (err) {
     console.error('admin/publish commit error:', err)
     return NextResponse.json({ error: (err as Error).message }, { status: 502 })

@@ -17,6 +17,7 @@ export type EditorInitial = {
   excerpt: string
   coverImage: string
   body: string
+  baseSha: string
 }
 
 type StagedImage = { path: string; base64: string; url: string }
@@ -203,6 +204,7 @@ export default function ArticleEditor({
           body,
           images: staged.map(({ path, base64 }) => ({ path, base64 })),
           originalSlug: mode === 'edit' ? initial?.slug : undefined,
+          baseSha: mode === 'edit' ? initial?.baseSha : undefined,
         }),
       })
       const data = await res.json().catch(() => ({}))

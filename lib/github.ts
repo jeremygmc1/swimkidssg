@@ -74,6 +74,15 @@ async function getFileText(path: string): Promise<string> {
   return res.text()
 }
 
+// Just the slugs of published posts, from the directory listing alone — no
+// per-file fetch/parse. Used for the publish uniqueness check.
+export async function listPostSlugs(): Promise<string[]> {
+  const entries = await ghJson<ContentEntry[]>(`/repos/${repo()}/contents/${POSTS_DIR}`)
+  return entries
+    .filter((e) => e.type === 'file' && e.name.endsWith('.mdx'))
+    .map((e) => e.name.replace(/\.mdx$/, ''))
+}
+
 // List published posts with parsed frontmatter, newest first.
 export async function listPosts(): Promise<PostSummary[]> {
   const entries = await ghJson<ContentEntry[]>(`/repos/${repo()}/contents/${POSTS_DIR}`)
@@ -112,14 +121,15 @@ export async function getPostRaw(slug: string): Promise<RawPost> {
   return { slug, data, content, sha: meta.sha }
 }
 
-// Repo-relative paths of the files directly under a directory (empty when the
-// directory does not exist). Used to delete a post's image folder on unpublish.
-export async function listDirFiles(dir: string): Promise<string[]> {
+// The files directly under a directory with their blob SHAs (empty when the
+// directory does not exist). Used to delete a post's image folder on unpublish
+// and to move images (by SHA) when a post is renamed.
+export async function listDirFiles(dir: string): Promise<{ path: string; sha: string }[]> {
   const res = await gh(`/repos/${repo()}/contents/${dir}`)
   if (res.status === 404) return []
   if (!res.ok) throw new Error(`GitHub GET ${dir} → ${res.status}`)
   const entries = (await res.json()) as ContentEntry[]
-  return entries.filter((e) => e.type === 'file').map((e) => e.path)
+  return entries.filter((e) => e.type === 'file').map((e) => ({ path: e.path, sha: e.sha }))
 }
 
 // Current blob SHA for a path, or null when it does not exist.
@@ -143,11 +153,16 @@ export type CommitFile = {
 
 export type CommitResult = { commitSha: string; url: string }
 
-// Commit any number of file writes and deletes as ONE commit, so a post and its
-// images land together (one deploy, no orphans). Retries once on a
+// A move/copy: place an already-committed blob at a new path without re-uploading
+// its bytes (used to relocate images when a post is renamed).
+export type BlobRef = { path: string; sha: string }
+
+// Commit any number of file writes, blob moves, and deletes as ONE commit, so a
+// post and its images land together (one deploy, no orphans). Retries once on a
 // non-fast-forward ref update, i.e. a concurrent push moved the branch.
 export async function commitFiles(params: {
   files?: CommitFile[]
+  blobRefs?: BlobRef[]
   deletions?: string[]
   message: string
   branch?: string
@@ -155,9 +170,10 @@ export async function commitFiles(params: {
   const branch = params.branch ?? 'main'
   const r = repo()
   const files = params.files ?? []
+  const blobRefs = params.blobRefs ?? []
   const deletions = params.deletions ?? []
 
-  if (files.length === 0 && deletions.length === 0) {
+  if (files.length === 0 && blobRefs.length === 0 && deletions.length === 0) {
     throw new Error('commitFiles called with nothing to commit.')
   }
 
@@ -177,12 +193,14 @@ export async function commitFiles(params: {
         return { path: f.path, mode: '100644', type: 'blob', sha: blob.sha }
       })
     )
+    // Existing blobs placed at new paths (moves), reusing their SHAs.
+    const moves = blobRefs.map((b) => ({ path: b.path, mode: '100644', type: 'blob', sha: b.sha }))
     // A tree entry with sha:null removes the path.
     const removals = deletions.map((path) => ({ path, mode: '100644', type: 'blob', sha: null }))
 
     const tree = await ghJson<{ sha: string }>(`/repos/${r}/git/trees`, {
       method: 'POST',
-      body: { base_tree: baseCommit.tree.sha, tree: [...additions, ...removals] },
+      body: { base_tree: baseCommit.tree.sha, tree: [...additions, ...moves, ...removals] },
     })
 
     const commit = await ghJson<{ sha: string }>(`/repos/${r}/git/commits`, {

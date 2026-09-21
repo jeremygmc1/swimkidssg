@@ -34,7 +34,7 @@ export async function POST(request: Request) {
   try {
     const images = await listDirFiles(`public/blog/${slug}`)
     const commit = await commitFiles({
-      deletions: [`content/posts/${slug}.mdx`, ...images],
+      deletions: [`content/posts/${slug}.mdx`, ...images.map((f) => f.path)],
       message: `Unpublish "${slug}"`,
       branch,
     })

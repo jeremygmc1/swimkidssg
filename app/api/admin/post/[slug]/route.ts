@@ -31,6 +31,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
       coverImage: str(post.data.coverImage),
       lastEdited: str(post.data.lastEdited),
       body: post.content,
+      sha: post.sha,
       hasJsx: containsJsx(post.content),
     })
   } catch (err) {

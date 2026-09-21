@@ -44,7 +44,10 @@ environment (you can scope them to Preview only for now):
 | `POSTS_TARGET_BRANCH` | `publish-test` &nbsp;← **makes publishing go to the scratch branch** |
 | `GITHUB_REPO` | `jeremygmc1/swimkidssg` (optional; this is the default) |
 
-`TELEGRAM_*` and `UPSTASH_*` are already set and reused.
+**No action needed for these** — they're already set and the admin flow reuses them:
+`TELEGRAM_*` (the publish/edit/unpublish ping) and `UPSTASH_*` (the Upstash Redis rate limiting
+that throttles the admin login and publishing, via `lib/ratelimit.ts`). If `UPSTASH_*` were ever
+unset, rate limiting simply no-ops (fails open) — it wouldn't block publishing.
 
 Then **redeploy the Preview** so it picks up the new vars (Deployments → ⋯ → Redeploy, or push
 any commit).
