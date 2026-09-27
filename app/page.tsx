@@ -31,7 +31,7 @@ export default function HomePage() {
               <Link
                 id="hero-cta"
                 href="/contact"
-                className="inline-block rounded-full bg-highlight-500 px-6 py-2.5 text-sm font-bold text-white shadow-lg transition hover:bg-highlight-600 md:px-8 md:py-3 md:text-base"
+                className="inline-block rounded-full bg-highlight-500 px-6 py-2.5 text-sm font-bold text-brand-900 shadow-lg transition hover:bg-highlight-600 md:px-8 md:py-3 md:text-base"
               >
                 Enquire Now
               </Link>
@@ -42,6 +42,7 @@ export default function HomePage() {
 
       {/* Why SwimKidsSG */}
       <section className="bg-brand-50 py-12 px-6">
+        <h2 className="sr-only">Why choose SwimKidsSG</h2>
         <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
           {[
             { title: 'Small Class Sizes', desc: 'Every child gets personal attention from a certified instructor.' },
@@ -65,21 +66,21 @@ export default function HomePage() {
           ))}
         </div>
         <div className="mt-8">
-          <Link href="/blog" className="text-cyan-500 font-medium hover:underline">
+          <Link href="/blog" className="text-brand-700 font-medium hover:underline">
             View all posts →
           </Link>
         </div>
       </section>
 
       {/* CTA Banner */}
-      <section className="bg-cyan-500 text-white py-16 px-6 text-center">
+      <section className="bg-cyan-500 text-brand-900 py-16 px-6 text-center">
         <h2 className="text-3xl font-bold mb-4">Ready to make a splash?</h2>
-        <p className="text-white/80 mb-8 max-w-xl mx-auto">
+        <p className="text-brand-900/90 mb-8 max-w-xl mx-auto">
           Spots fill up fast. Get in touch today and we&apos;ll find the right programme for your child.
         </p>
         <Link
           href="/contact"
-          className="inline-block bg-white text-cyan-600 font-bold px-10 py-4 rounded-full hover:bg-brand-50 transition text-lg shadow"
+          className="inline-block bg-white text-brand-700 font-bold px-10 py-4 rounded-full hover:bg-brand-50 transition text-lg shadow"
         >
           Book a Spot
         </Link>

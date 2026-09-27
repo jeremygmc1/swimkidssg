@@ -18,7 +18,7 @@ export default function BlogPage() {
       <p className="text-gray-500 mb-10">Swimming tips, water safety, and updates.</p>
 
       {posts.length === 0 ? (
-        <p className="text-gray-400">No posts yet — check back soon.</p>
+        <p className="text-gray-500">No posts yet — check back soon.</p>
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {posts.map((post) => (
