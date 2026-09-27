@@ -178,6 +178,8 @@ export async function commitFiles(params: {
     throw new Error('commitFiles called with nothing to commit.')
   }
 
+  let lastStatus = 0
+  let lastText = ''
   for (let attempt = 0; attempt < 2; attempt++) {
     const ref = await ghJson<{ object: { sha: string } }>(`/repos/${r}/git/ref/heads/${branch}`)
     const baseCommitSha = ref.object.sha
@@ -216,13 +218,17 @@ export async function commitFiles(params: {
     if (update.ok) {
       return { commitSha: commit.sha, url: `https://github.com/${r}/commit/${commit.sha}` }
     }
-    // 422 == non-fast-forward: the branch moved under us. Rebuild against the
-    // new head on the next pass. Any other status is a real failure.
-    if (update.status !== 422) {
-      const text = await update.text().catch(() => '')
-      throw new Error(`GitHub update ref → ${update.status}: ${text.slice(0, 300)}`)
-    }
+    lastStatus = update.status
+    lastText = (await update.text().catch(() => '')).slice(0, 300)
+    // Retry ONLY a genuine non-fast-forward (a concurrent push moved the branch),
+    // and only once. Every other 422 — a protected branch, a missing ref, a
+    // permissions problem — won't fix itself, so fail fast with GitHub's reason
+    // rather than masking it as a "concurrent change".
+    if (update.status === 422 && /fast[ -]?forward/i.test(lastText)) continue
+    break
   }
 
-  throw new Error('Could not update the branch after a concurrent change — please retry.')
+  throw new Error(
+    `Could not update branch "${branch}" (HTTP ${lastStatus}): ${lastText || 'no detail from GitHub'}`
+  )
 }
