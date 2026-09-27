@@ -25,6 +25,12 @@ export const authLimiter = redis
   ? new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(10, '1 m'), prefix: 'rl:auth' })
   : null
 
+// Analytics snapshot command: 1 per minute (keyed by chat, not IP), since each
+// run spins up a headless browser on the worker — the expensive path.
+export const snapshotLimiter = redis
+  ? new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(1, '1 m'), prefix: 'rl:snapshot' })
+  : null
+
 // Best-effort client IP from the proxy headers Vercel sets.
 export function clientIp(req: Request): string {
   const xff = req.headers.get('x-forwarded-for')

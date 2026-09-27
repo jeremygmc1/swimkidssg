@@ -1,0 +1,21 @@
+{
+  "name": "swimkidssg-analytics-snapshot-worker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Always-on worker: screenshots the Vercel Analytics dashboard and pushes it to Telegram on demand.",
+  "scripts": {
+    "start": "node index.js",
+    "capture-session": "node capture-session.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "playwright-core": "^1.49.1"
+  },
+  "devDependencies": {
+    "playwright": "^1.49.1"
+  }
+}

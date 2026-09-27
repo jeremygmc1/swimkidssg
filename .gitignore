@@ -16,3 +16,7 @@ out/
 .DS_Store
 *.pem
 npm-debug.log*
+
+# worker: captured Vercel session (secret — never commit)
+worker/**/vercel-session.json
+worker/**/node_modules/
