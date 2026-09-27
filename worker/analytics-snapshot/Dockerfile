@@ -16,4 +16,9 @@ ENV NODE_ENV=production
 ENV PORT=8080
 EXPOSE 8080
 
+# Drop root. The base image ships a non-root "pwuser" (uid 1000) that already has
+# access to the bundled browser under /ms-playwright. The app only reads its
+# (world-readable) files and writes to /tmp at runtime, so no chown is needed.
+USER pwuser
+
 CMD ["node", "index.js"]
