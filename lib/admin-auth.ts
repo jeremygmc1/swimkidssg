@@ -8,8 +8,6 @@ import { NextResponse } from 'next/server'
 import { timingSafeEqual } from 'crypto'
 import { authLimiter, isRateLimited, clientIp } from '@/lib/ratelimit'
 
-const REALM = 'SwimKidsSG admin'
-
 function safeEqual(provided: string, expected: string): boolean {
   const a = Buffer.from(provided)
   const b = Buffer.from(expected)
@@ -37,8 +35,9 @@ export async function guardAdmin(request: Request): Promise<NextResponse | null>
   if (await isRateLimited(authLimiter, clientIp(request))) {
     return new NextResponse('Too many attempts. Please try again later.', { status: 429 })
   }
-  return new NextResponse('Authentication required', {
-    status: 401,
-    headers: { 'WWW-Authenticate': `Basic realm="${REALM}"` },
-  })
+  // NOTE: deliberately NO `WWW-Authenticate` header. The admin UI drives Basic
+  // auth itself through a login form (lib/admin-client), so the credential is
+  // sent as an Authorization header we build. Sending the challenge header would
+  // make the browser pop its own native username/password dialog over our form.
+  return new NextResponse('Authentication required', { status: 401 })
 }
