@@ -1,0 +1,49 @@
+# Phase 2 — SAST via CodeQL (GitHub-native taint analysis for JS/TS).
+# Free on this repo because it is public. Results are uploaded to the
+# repository's Security tab (Code scanning), not enforced as a merge gate yet:
+# Phase 2 is report-only so the initial backlog can be triaged before any of
+# these checks is promoted to a required status check.
+name: CodeQL
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    # Weekly deep scan (Mondays 03:27 UTC) catches advisories/queries published
+    # since the code last changed. Off-peak minute to avoid the top-of-hour rush.
+    - cron: '27 3 * * 1'
+
+# Least privilege: read the code, and write findings to Code scanning.
+permissions:
+  contents: read
+  security-events: write
+
+concurrency:
+  group: codeql-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze (javascript-typescript)
+    runs-on: ubuntu-latest
+    steps:
+      # Actions pinned to full commit SHAs (supply-chain hardening); the
+      # trailing comment is the human-readable version Dependabot bumps.
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@404bd795832c959ffb8efae2b1b4cc1aafc82058 # v3.37.6
+        with:
+          languages: javascript-typescript
+          # security-extended adds higher-recall security queries on top of the
+          # default set (more coverage, a few more low-confidence results).
+          queries: security-extended
+
+      # JS/TS is interpreted, so CodeQL needs no build step — it reads the
+      # source directly. analyze runs the queries and uploads the SARIF.
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@404bd795832c959ffb8efae2b1b4cc1aafc82058 # v3.37.6
+        with:
+          category: "/language:javascript-typescript"
