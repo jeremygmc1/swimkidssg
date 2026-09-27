@@ -179,8 +179,11 @@ Also add `"typecheck": "tsc --noEmit"` to `package.json` scripts.
 the Security tab. Triage the initial backlog, then drop `continue-on-error` and add them as
 required status checks to promote High/Critical to **blocking**.
 
-**Phase 3 — SCA hardening (week 1–2).** Add `npm audit` gate + Trivy. Clear the current
-advisory backlog, then make High/Critical blocking.
+**Phase 3 — SCA hardening. ✅ Shipped (report-only).** `sca.yml` runs `npm audit
+--audit-level=high` and Trivy `fs` (SARIF → Security tab) on PR, push to `main`, and a
+weekly cron. Both `continue-on-error` for now; the npm-audit baseline is already clean
+(0 vulns after the #25 remediation), so promote by removing `continue-on-error` and adding
+the check to branch protection.
 
 **Phase 4 — DAST. ✅ Shipped (report-only, Option A).** `dast.yml` runs an OWASP ZAP
 Baseline scan against the Vercel preview, triggered by the `deployment_status` event the
