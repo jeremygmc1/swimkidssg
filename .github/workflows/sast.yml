@@ -1,0 +1,70 @@
+# Phase 2 — supplementary SAST (Semgrep) + secret scanning (Gitleaks).
+# Both run report-only for now: `continue-on-error` keeps the checks from
+# blocking merges while the initial backlog is triaged. Findings still land in
+# the Security tab (Code scanning) so they can be tracked. Once clean, drop the
+# continue-on-error and add these as required status checks to promote to gates.
+name: SAST
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  security-events: write # upload SARIF to Code scanning
+
+concurrency:
+  group: sast-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  semgrep:
+    name: Semgrep
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      # pipx is preinstalled on GitHub ubuntu runners and avoids PEP-668
+      # "externally managed environment" errors from a bare pip install.
+      - name: Install Semgrep
+        run: pipx install semgrep
+
+      # Framework-aware rule packs from the Semgrep registry. Report-only:
+      # findings are written to SARIF; a non-zero exit never fails the build yet.
+      - name: Run Semgrep
+        continue-on-error: true
+        run: |
+          semgrep scan \
+            --config p/default \
+            --config p/javascript \
+            --config p/typescript \
+            --config p/react \
+            --config p/owasp-top-ten \
+            --sarif --output semgrep.sarif
+
+      - name: Upload Semgrep SARIF
+        if: ${{ hashFiles('semgrep.sarif') != '' }}
+        uses: github/codeql-action/upload-sarif@404bd795832c959ffb8efae2b1b4cc1aafc82058 # v3.37.6
+        with:
+          sarif_file: semgrep.sarif
+          category: semgrep
+
+  gitleaks:
+    name: Gitleaks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # Full history so Gitleaks scans every commit, not just the tip.
+          fetch-depth: 0
+
+      # Free for public repos; complements GitHub's native push protection by
+      # scanning diffs and history with its own rule/entropy engine. Report-only.
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
