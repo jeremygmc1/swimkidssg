@@ -94,6 +94,11 @@ export async function POST(request: Request) {
   }
   const originalSlug = payload.originalSlug?.trim() || undefined
   const branch = payload.branch?.trim() || process.env.POSTS_TARGET_BRANCH || 'main'
+  // Restrict branch to a safe git-ref subset so user input cannot alter API paths.
+  // Allows common names like main, release/1.2.3, feature-x, hotfix_bug.
+  if (!/^[A-Za-z0-9._/-]{1,100}$/.test(branch) || branch.includes('..') || branch.startsWith('/') || branch.endsWith('/')) {
+    return NextResponse.json({ error: 'Invalid branch.' }, { status: 400 })
+  }
 
   // Offline validation first, so field/body errors surface instantly and don't
   // depend on GitHub being reachable. Uniqueness (which needs the live list) is

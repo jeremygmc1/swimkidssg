@@ -30,6 +30,11 @@ export async function POST(request: Request) {
   if (!isValidSlug(slug)) {
     return NextResponse.json({ error: 'Invalid slug.' }, { status: 400 })
   }
+  // Restrict branch to a safe git-ref subset so user input cannot alter API paths.
+  // Allows common names like main, release/1.2.3, feature-x, hotfix_bug.
+  if (!/^[A-Za-z0-9._/-]{1,100}$/.test(branch) || branch.includes('..') || branch.startsWith('/') || branch.endsWith('/')) {
+    return NextResponse.json({ error: 'Invalid branch.' }, { status: 400 })
+  }
 
   try {
     const images = await listDirFiles(`public/blog/${slug}`)
