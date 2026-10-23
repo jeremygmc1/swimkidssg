@@ -10,19 +10,32 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@mdx-js/mdx": "^3.1.1",
+    "@tiptap/extension-image": "^3.31.3",
+    "@tiptap/extension-link": "^3.31.3",
+    "@tiptap/pm": "^3.31.3",
+    "@tiptap/react": "^3.31.3",
+    "@tiptap/starter-kit": "^3.31.3",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.38.2",
     "@vercel/analytics": "^2.0.1",
     "@vercel/blob": "^2.6.1",
-    "googleapis": "^173.0.0",
+    "googleapis": "^174.0.1",
     "gray-matter": "^4.0.3",
-    "next": "^16.2.10",
+    "next": "^16.3.3",
     "next-mdx-remote": "^6.0.0",
     "react": "^19",
-    "react-dom": "^19"
+    "react-dom": "^19",
+    "tiptap-markdown": "^0.9.0"
   },
   "overrides": {
-    "postcss": "^8.5.10"
+    "postcss": "^8.5.10",
+    "sharp": "^0.35.4",
+    "js-yaml": "^4.3.2",
+    "gray-matter": {
+      "js-yaml": "^3.15.2"
+    },
+    "qs": "^6.16.0"
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.15",
@@ -31,7 +44,7 @@
     "@types/react-dom": "^19",
     "autoprefixer": "^10.4.19",
     "eslint": "^9",
-    "eslint-config-next": "^16.2.9",
+    "eslint-config-next": "^16.3.3",
     "postcss": "^8.5.10",
     "tailwindcss": "^3.4.4",
     "typescript": "^5"
