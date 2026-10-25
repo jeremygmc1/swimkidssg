@@ -126,7 +126,14 @@ export default function ArticleEditor({
   const inlineInputRef = useRef<HTMLInputElement>(null)
 
   const editor = useEditor({
-    extensions: [StarterKit, Image, Markdown.configure({ html: false, breaks: false })],
+    extensions: [
+      StarterKit,
+      Image,
+      // transformPastedText lets an author paste a Markdown draft and have it
+      // convert to formatted content (headings, bold, lists) instead of literal
+      // `##`/`**`. html:false keeps pasted raw HTML/JSX out (Markdown-only).
+      Markdown.configure({ html: false, breaks: false, transformPastedText: true, transformCopiedText: true }),
+    ],
     content: initial?.body ?? '',
     immediatelyRender: false,
     editorProps: {
