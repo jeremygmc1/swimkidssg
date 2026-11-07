@@ -44,6 +44,6 @@ jobs:
       # JS/TS is interpreted, so CodeQL needs no build step — it reads the
       # source directly. analyze runs the queries and uploads the SARIF.
       - name: Perform CodeQL analysis
-        uses: github/codeql-action/analyze@c4dd10e44af883a891fe31ced449bcb4a6728b9b # v3.37.6
+        uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           category: "/language:javascript-typescript"
